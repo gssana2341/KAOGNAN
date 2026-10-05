@@ -1,0 +1,107 @@
+import { api } from '../api.js';
+import { mascot } from '../mascot.js';
+import {
+  LEAVE_STATUS, LEAVE_TYPES, PART_LABEL, addDays, badge, busy, confirmBox, esc, fmtDateShort, fmtDays, formData, toast,
+} from '../util.js';
+
+const todayStr = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+const range = (l) => (l.start_date === l.end_date ? fmtDateShort(l.start_date) : `${fmtDateShort(l.start_date)} – ${fmtDateShort(l.end_date)}`);
+
+export default function leave(el) {
+  let workdays = [1, 2, 3, 4, 5];
+
+  async function load() {
+    const [d, t] = await Promise.all([api.get('/leaves'), api.get('/today')]);
+    workdays = t.settings.workdays;
+    draw(d);
+  }
+
+  function draw({ leaves, used, year }) {
+    const today = todayStr();
+    const oldForm = el.querySelector('form');
+    const keep = oldForm ? formData(oldForm) : {};
+    el.innerHTML = `
+      <section class="card">
+        <div class="card-title"><h2>🌴 ขอลาออนไลน์</h2></div>
+        <form class="form" id="leave-form">
+          <div>
+            <div class="seg">${Object.entries(LEAVE_TYPES).map(([k, v], i) => `
+              <input type="radio" name="type" id="t-${k}" value="${k}" ${(keep.type ?? 'sick') === k ? 'checked' : ''} ${i === 0 ? 'required' : ''}><label for="t-${k}">${v.icon} ${v.label}</label>`).join('')}
+            </div>
+          </div>
+          <div class="two keep">
+            <label class="field">ตั้งแต่วันที่<input type="date" name="start_date" value="${keep.start_date ?? today}" min="${addDays(today, -60)}" required></label>
+            <label class="field">ถึงวันที่<input type="date" name="end_date" value="${keep.end_date ?? today}" min="${addDays(today, -60)}" required></label>
+          </div>
+          <div class="seg" id="part-box" hidden>
+            <input type="radio" name="part" id="p-full" value="full" checked><label for="p-full">เต็มวัน</label>
+            <input type="radio" name="part" id="p-am" value="am"><label for="p-am">ครึ่งวันเช้า</label>
+            <input type="radio" name="part" id="p-pm" value="pm"><label for="p-pm">ครึ่งวันบ่าย</label>
+          </div>
+          <label class="field">เหตุผล (ไม่บังคับ)<textarea name="reason" maxlength="500" placeholder="เช่น ไปพบแพทย์ / ธุระครอบครัว">${esc(keep.reason ?? '')}</textarea></label>
+          <div class="row between"><b id="days-info" class="muted"></b><button class="btn primary">ส่งใบลา</button></div>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h3>สรุปการลาปี ${Number(year) + 543}</h3></div>
+        <div class="stats">${Object.entries(LEAVE_TYPES).map(([k, v]) => `<div class="stat"><b>${fmtDays(used[k] ?? 0)}</b><span>${v.icon} ${v.label} (วัน)</span></div>`).join('')}</div>
+      </section>
+
+      <section class="list">
+        <h3 style="margin:6px 4px 0">ใบลาของฉัน</h3>
+        ${leaves.length ? leaves.map((l) => `
+          <div class="item" style="align-items:flex-start">
+            <div class="grow">
+              <div><b>${LEAVE_TYPES[l.type].icon} ${LEAVE_TYPES[l.type].label}</b> · ${range(l)}${PART_LABEL[l.part]} · ${fmtDays(l.days)} วัน</div>
+              ${l.reason ? `<div class="small muted">${esc(l.reason)}</div>` : ''}
+              ${l.admin_note ? `<div class="small">💬 ${esc(l.admin_note)}</div>` : ''}
+            </div>
+            <div class="stack" style="align-items:flex-end">
+              ${badge(LEAVE_STATUS[l.status].label, LEAVE_STATUS[l.status].cls)}
+              ${l.status === 'pending' ? `<button class="btn small danger" data-cancel="${l.id}">ยกเลิก</button>` : ''}
+            </div>
+          </div>`).join('') : `<div class="card empty">${mascot('happy', 90)}<p>ยังไม่เคยขอลา</p></div>`}
+      </section>`;
+    wire();
+  }
+
+  function wire() {
+    const form = el.querySelector('#leave-form');
+    const start = form.elements.start_date;
+    const end = form.elements.end_date;
+    const partBox = el.querySelector('#part-box');
+    const info = el.querySelector('#days-info');
+
+    function refresh() {
+      if (end.value < start.value) end.value = start.value;
+      end.min = start.value;
+      const single = start.value === end.value;
+      partBox.hidden = !single;
+      if (!single) form.elements.part.value = 'full';
+      let n = 0;
+      for (let d = start.value; d <= end.value && n < 400; d = addDays(d, 1)) if (workdays.includes(new Date(d + 'T00:00:00Z').getUTCDay())) n++;
+      if (single && form.elements.part.value !== 'full') n *= 0.5;
+      info.textContent = n ? `รวม ${fmtDays(n)} วัน` : 'ช่วงนี้ไม่มีวันทำงาน';
+    }
+    form.addEventListener('input', refresh);
+    refresh();
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      busy(form.querySelector('.btn.primary'), async () => {
+        const d = formData(form);
+        await api.post('/leaves', { type: d.type, start_date: d.start_date, end_date: d.end_date, part: d.part, reason: d.reason });
+        toast('ส่งใบลาแล้ว รอผู้ดูแลอนุมัตินะ 💌');
+        el.querySelector('form').reset();
+        await load();
+      });
+    });
+    el.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', async () => {
+      if (!(await confirmBox('ยกเลิกใบลานี้ใช่ไหม?', 'ยกเลิกใบลา'))) return;
+      busy(b, async () => { await api.del(`/leaves/${b.dataset.cancel}`); toast('ยกเลิกใบลาแล้ว'); await load(); });
+    }));
+  }
+
+  load().catch((e) => { el.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+}
