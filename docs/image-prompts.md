@@ -6,7 +6,7 @@
 | อยากได้ | วางไฟล์ที่ไหน | ขนาด | ผลลัพธ์ |
 |---|---|---|---|
 | มาสคอตแมว 4 ท่า | วางรูปดิบใน `art-source/mascot/` (`sleepy` `happy` `bye` `oops` + `chill` ไม่บังคับ) แล้วรัน `npm run mascot` | รูปสี่เหลี่ยมจัตุรัส ~1024px พื้นขาวล้วนหรือโปร่งใสก็ได้ | แทนแมวในหน้าล็อกอิน หน้าหลัก ป๊อปอัปสแกนสำเร็จ โปสเตอร์ QR และหน้าว่างต่าง ๆ |
-| ไอคอนแอป | `public/icons/icon-source.png` แล้วรัน `npm run icons` | 1024×1024 เต็มกรอบ ไม่โปร่งใส | ไอคอนติดตั้งบนมือถือ + โลโก้มุมซ้ายบน + favicon |
+| ไอคอนแอป | `public/icons/icon-source.png` แล้วรัน `npm run app-icon` | 1024×1024 เต็มกรอบ ไม่โปร่งใส | ไอคอนติดตั้งบนมือถือ + โลโก้มุมซ้ายบน + favicon |
 | พื้นหลังใหม่ | `public/bg/ชื่อไฟล์.webp` (+ ชื่อไทยใน `public/bg/backgrounds.json`) | ดูด้านล่าง | โผล่ในหน้า “ฉัน → เลือกพื้นหลัง” ทันที |
 
 ชื่อไฟล์ใช้ได้เฉพาะ `a-z 0-9 _ -` · ไฟล์ `.png` `.jpg` `.webp` `.avif` ก็ใช้ได้ (มาสคอตใช้ `.webp` `.png` หรือ `.svg`)
@@ -54,17 +54,23 @@ no text, no watermark, no logo, no background scenery.
 
 ต้อง **เต็มกรอบสี่เหลี่ยม ไม่โปร่งใส ไม่ต้องโค้งมุมเอง** (มือถือจะมาโค้ง/ตัดวงกลมให้) และให้ตัวแมวอยู่ใน **กลาง 80%** ของรูป เพื่อไม่ให้ถูกตัด
 
+**แนบรูปมาสคอตท่า `happy` เป็นรูปอ้างอิงด้วย** ไอคอนจะเป็นแมวตัวเดียวกับในแอป แล้วใช้ prompt นี้ (เน้นหน้าแมวใกล้ ๆ ให้เห็นชัดแม้ตอนย่อเหลือ 34 พิกเซล):
+
 ```
-Mobile app icon, square 1:1. A cute kawaii white kitten face with a small pink bow on the ear,
-big shiny eyes, pink blush, happy smile, centered and filling about 65% of the canvas.
+Mobile app icon, square 1:1. Close-up of the SAME character as the reference image: the cute white kawaii kitten's
+head and shoulders, small pink bow on its ear, soft lavender tabby stripes on the forehead, big shiny black eyes
+with white highlights, rosy blush, happy open smile. The face is large, centered and fills about 70% of the canvas
+so it stays recognizable at a tiny size. Keep the identical design, colors and proportions as the reference.
 A small round green check-mark badge with a white ring at the bottom-right corner.
 Smooth gradient background from soft pink (#ffb3d6) through hot pink (#ff7ab5) to lavender (#b19cff),
-subtle glossy highlight in the top-left. Soft 3D-sticker style with a clean dark plum outline,
-modern, playful and clean. Full-bleed square background, no rounded corners, no text, no letters,
-no border, no watermark. 1024x1024.
+subtle glossy highlight in the top-left. Sticker-style illustration with the same clean dark plum outline (#4a3548),
+soft cel shading, modern, playful and clean. Full-bleed square background, no rounded corners, no text,
+no letters, no border, no watermark. 1024x1024.
 ```
 
-ได้รูปแล้ว: บันทึกเป็น `public/icons/icon-source.png` → รัน `npm run icons` → ระบบสร้างไอคอน 192 / 512 / maskable ให้เอง (เปลี่ยนทั้งโลโก้ในแอปและ favicon)
+ถ้ารูปที่ได้ไม่มีเครื่องหมายถูก หรืออยากได้แบบไม่มีเครื่องหมายถูก ตัดประโยค "A small round green check-mark badge..." ออกได้เลย
+
+ได้รูปแล้ว: บันทึกเป็น `public/icons/icon-source.png` → รัน `npm run app-icon` → ระบบสร้างไอคอน 192 / 512 / maskable ให้เอง (เปลี่ยนทั้งโลโก้ในแอปและ favicon)
 
 ---
 
