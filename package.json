@@ -10,6 +10,7 @@
     "cert": "node scripts/make-cert.js",
     "seed": "node scripts/seed-demo.js",
     "icons": "node scripts/build-icons.js",
+    "mascot": "node scripts/make-mascot.js",
     "test": "node --test test/api.test.js"
   },
   "keywords": [],

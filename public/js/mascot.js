@@ -32,7 +32,9 @@ const EXTRA = {
 export function mascot(state = 'happy', size = 120) {
   if (assets.mascot) {
     const src = assets.mascot[state] ?? assets.mascot.happy;
-    return `<img class="mascot img ${state}" src="${src}" width="${size}" height="${size}" alt="" decoding="async">`;
+    // pictures carry empty margin (sparkles, effects), so draw them a bit larger than the built-in cat at the same "size"
+    const px = Math.round(size * 1.18);
+    return `<img class="mascot img ${state}" src="${src}" width="${px}" height="${px}" alt="" decoding="async">`;
   }
   const id = `m${uid++}`;
   const bye = state === 'bye';

@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { icon } from '../icons.js';
+import { assets } from '../assets.js';
 import { mascot } from '../mascot.js';
 import { esc, fitQr } from '../util.js';
 
@@ -53,7 +54,7 @@ export default function qrScreen(el) {
         </div>
         ${rotating ? `<div class="banner warn no-print">${icon('triangle-alert', 22)}<span>ตอนนี้ตั้งเป็นโหมด “QR เปลี่ยนทุกครั้ง” — ใช้แสดงบนจอ/แท็บเล็ตที่ทำงาน <b>พิมพ์ไปติดผนังไม่ได้</b> (QR จะหมดอายุ) ถ้าจะพิมพ์ให้ไปเปลี่ยนเป็น “QR ติดผนัง” ที่ <a href="#/admin/settings">ตั้งค่า & QR</a> ก่อน</span></div>` : ''}
 
-        <div class="poster ${pref.orient}" style="--pwn:${printable[0]};--phn:${printable[1]}">
+        <div class="poster ${pref.orient}${assets.mascot ? ' has-img' : ''}" style="--pwn:${printable[0]};--phn:${printable[1]}">
           <div class="p-band"><div class="p-mascot">${mascot('happy', 120)}</div></div>
           <div class="p-main">
             <div class="p-head">

@@ -5,7 +5,7 @@
 
 | อยากได้ | วางไฟล์ที่ไหน | ขนาด | ผลลัพธ์ |
 |---|---|---|---|
-| มาสคอตแมว 4 ท่า | `public/img/mascot/sleepy.webp` `happy.webp` `bye.webp` `oops.webp` (+ `chill.webp` ไม่บังคับ) | 512×512 พื้นโปร่งใส | แทนแมวในหน้าล็อกอิน หน้าหลัก ป๊อปอัปสแกนสำเร็จ หน้าว่างต่าง ๆ |
+| มาสคอตแมว 4 ท่า | วางรูปดิบใน `art-source/mascot/` (`sleepy` `happy` `bye` `oops` + `chill` ไม่บังคับ) แล้วรัน `npm run mascot` | รูปสี่เหลี่ยมจัตุรัส ~1024px พื้นขาวล้วนหรือโปร่งใสก็ได้ | แทนแมวในหน้าล็อกอิน หน้าหลัก ป๊อปอัปสแกนสำเร็จ โปสเตอร์ QR และหน้าว่างต่าง ๆ |
 | ไอคอนแอป | `public/icons/icon-source.png` แล้วรัน `npm run icons` | 1024×1024 เต็มกรอบ ไม่โปร่งใส | ไอคอนติดตั้งบนมือถือ + โลโก้มุมซ้ายบน + favicon |
 | พื้นหลังใหม่ | `public/bg/ชื่อไฟล์.webp` (+ ชื่อไทยใน `public/bg/backgrounds.json`) | ดูด้านล่าง | โผล่ในหน้า “ฉัน → เลือกพื้นหลัง” ทันที |
 
@@ -18,8 +18,10 @@
 **ขั้นตอนที่ได้ตัวละครหน้าเดิมทุกท่า**
 1. สร้างท่า `happy` ก่อน เลือกอันที่ชอบที่สุด
 2. ท่าอื่นให้แนบรูป `happy` เป็นรูปอ้างอิง แล้วเติมประโยค *“same exact character as the reference image, keep the identical design, colors and proportions”*
-3. ลบพื้นหลังให้โปร่งใส (remove.bg / Photopea / ChatGPT “remove background”) → ย่อเป็น 512×512 → บันทึกเป็น `.webp` (squoosh.app)
-4. ตั้งชื่อตามท่า วางใน `public/img/mascot/` → รีเฟรชหน้าเว็บ (ไม่ต้องรีสตาร์ตเซิร์ฟเวอร์)
+3. บันทึกรูปที่ได้ (พื้นขาวล้วนก็ได้ **ไม่ต้องลบพื้นหลังเอง**) ตั้งชื่อตามท่า `sleepy.png` `happy.png` `bye.png` `oops.png` (+ `chill.png`) วางในโฟลเดอร์ `art-source/mascot/`
+4. รัน `npm run mascot` — สคริปต์ลบพื้นหลัง (เก็บขนสีขาวข้างในตัวแมวไว้), จัดกึ่งกลาง, ย่อเป็น 512×512 แล้วบันทึกเป็น `public/img/mascot/<ท่า>.webp` ให้ครบ
+   (ต้องมีเส้นขอบสีเข้มรอบตัวแมวแบบปิดสนิท ตาม prompt ด้านล่าง ไม่งั้นพื้นหลังอาจรั่วเข้าตัวแมว · ถ้ายังเหลือขอบขาว/ตัดเข้าเนื้อ ลองปรับ `TOLERANCE=25 npm run mascot` หรือ `TOLERANCE=55 npm run mascot`)
+5. รีเฟรชหน้าเว็บ (ไม่ต้องรีสตาร์ตเซิร์ฟเวอร์) ถ้าพอใจแล้ว commit ไฟล์ใน `public/img/mascot/` แล้ว push ขึ้นเว็บจริง
 
 **Prompt ตัวละครหลัก (ใช้ร่วมกันทุกท่า)**
 
@@ -30,7 +32,7 @@ rosy pink blush on the cheeks, tiny pink triangle nose, short whiskers, pink inn
 small round body with a pale pink belly patch, little white paws, long curled tail.
 Sticker-style illustration, clean dark plum outline (#4a3548), flat pastel colors with soft cel shading,
 chibi proportions, friendly and adorable. Full body visible with some margin around it,
-centered, isolated on a plain solid white background, square 1:1, high resolution,
+centered, isolated on a plain pure white (#FFFFFF) background with no shadow on the ground, the dark outline fully closed all around the body, square 1:1, high resolution,
 no text, no watermark, no logo, no background scenery.
 ```
 

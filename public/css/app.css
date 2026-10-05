@@ -441,6 +441,10 @@ table.table { width: 100%; border-collapse: separate; border-spacing: 0; backgro
 .p-foot b { color: var(--pink-d); }
 .p-count { margin-top: 2cqw; }
 
+/* picture mascots carry empty margin around the character, so draw them larger than the built-in cat */
+.poster.has-img .p-mascot { width: 32cqw; bottom: -13cqw; }
+.poster.has-img .p-main { padding-top: 12cqw; }
+
 /* landscape: left panel (mascot, name, steps) + big QR on the right */
 .poster.landscape { display: grid; grid-template-columns: 44% 1fr; grid-template-rows: auto auto 1fr auto; grid-template-areas: 'mascot qr' 'head qr' 'steps qr' 'foot foot'; text-align: left; }
 .poster.landscape::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 44%; background: linear-gradient(160deg, #ffd9ec, #e6dfff 70%, #d3ebff); }
@@ -480,3 +484,5 @@ table.table { width: 100%; border-collapse: separate; border-spacing: 0; backgro
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.poster.landscape.has-img .p-mascot { width: 15.5cqw; }

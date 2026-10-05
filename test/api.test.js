@@ -217,13 +217,19 @@ test('background selection and custom upload', async () => {
   assert.equal((await call('POST', '/me/bg-image', { token: t, body: { image: 'data:image/png;base64,AAAA' } })).status, 400);
 });
 
-test('assets: backgrounds are discovered from public/bg, mascot defaults to the built-in cat', async () => {
+test('assets: backgrounds are discovered from public/bg, mascot pictures are all-or-nothing', async () => {
   const a = await call('GET', '/assets');
   assert.equal(a.status, 200, 'public: needed by the login screen');
   const ids = a.backgrounds.map((b) => b.id);
   assert.ok(ids.includes('sky') && ids.includes('night'));
   assert.ok(a.backgrounds.every((b) => /^\/bg\/[\w-]+\.(svg|webp|png|jpe?g|avif)$/i.test(b.file)));
-  assert.equal(a.mascot, null, 'no replacement mascot images installed');
+  // either the built-in cat (null) or a complete set of pictures that exist on disk
+  if (a.mascot !== null) {
+    for (const s of ['sleepy', 'happy', 'bye', 'oops']) {
+      assert.match(a.mascot[s], /^\/img\/mascot\/\w+\.(webp|png|svg)$/);
+      assert.ok(fs.existsSync(path.join(__dirname, '..', 'public', a.mascot[s])), `${s} picture exists`);
+    }
+  }
   assert.equal((await call('PUT', '/me/bg', { token: ctx.malee, body: { bg: ids[3] } })).status, 200);
 });
 
