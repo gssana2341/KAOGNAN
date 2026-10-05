@@ -1,11 +1,12 @@
 import { api } from '../api.js';
 import { icon } from '../icons.js';
-import { busy, cardTitle, confirmBox, esc, formData, skeleton, toast } from '../util.js';
+import { busy, cardTitle, confirmBox, esc, fitQr, formData, skeleton, toast } from '../util.js';
 import { adminTabs } from './admin-common.js';
 
 const DAYS = [[1, 'จ.'], [2, 'อ.'], [3, 'พ.'], [4, 'พฤ.'], [5, 'ศ.'], [6, 'ส.'], [0, 'อา.']];
 
 export default function settings(el) {
+  let stopFit = () => {};
   async function load() {
     const [{ settings: s }, qr] = await Promise.all([api.get('/admin/settings'), api.get('/admin/qr')]);
     el.innerHTML = `
@@ -37,7 +38,7 @@ export default function settings(el) {
 
       <section class="card center">
         ${cardTitle('qr-code', 'pink', 'QR ของที่ทำงาน')}
-        <div class="qr-box">${qr.svg}</div>
+        <div class="qr-box"><div class="qr-slot">${qr.svg}</div></div>
         <p class="muted small" style="margin-top:10px">${qr.mode === 'rotating' ? 'โหมดเปลี่ยนทุกครั้ง — ให้เปิดหน้าจอ QR ค้างไว้ที่ทำงาน' : 'พิมพ์ไปติดที่ทำงานได้เลย พนักงานสแกนเข้า/ออกด้วย QR เดียวกัน'}</p>
         <div class="row" style="justify-content:center">
           <a class="btn primary" href="#/qr">${icon('monitor', 17)}เปิดหน้าจอ QR / พิมพ์</a>
@@ -45,6 +46,8 @@ export default function settings(el) {
         </div>
         <p class="small muted" style="margin-top:10px">“สร้าง QR ใหม่” จะทำให้ QR ที่พิมพ์ไว้เดิมใช้ไม่ได้ทันที (ใช้เมื่อ QR รั่วไหล)</p>
       </section>`;
+    stopFit();
+    stopFit = fitQr(el.querySelector('.qr-slot'));
     wire();
   }
 
@@ -73,4 +76,5 @@ export default function settings(el) {
 
   el.innerHTML = adminTabs('/admin/settings') + skeleton(2);
   load().catch((e) => { el.innerHTML = `${adminTabs('/admin/settings')}<div class="card empty">${esc(e.message)}</div>`; });
+  return () => stopFit();
 }

@@ -5,7 +5,7 @@ const { createClient } = require('@libsql/client');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { hashPassword } = require('./password');
+const { hashPassword, verifyPassword } = require('./password');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const REMOTE_URL = process.env.TURSO_DATABASE_URL;
@@ -128,6 +128,22 @@ async function init() {
       console.log(fromEnv
         ? '\n  สร้างบัญชีแอดมินแล้ว: ชื่อผู้ใช้ admin / รหัสผ่านตามที่ตั้งใน ADMIN_PASSWORD\n'
         : `\n  สร้างบัญชีแอดมินเริ่มต้นแล้ว:  ชื่อผู้ใช้ admin  /  รหัสผ่าน ${password}  (ระบบจะบังคับให้เปลี่ยนรหัสผ่านตอนเข้าครั้งแรก)\n`);
+    }
+  }
+
+  // Recovery for hosted setups (no email reset): whoever controls the environment variables owns the system.
+  //  - ADMIN_PASSWORD set later still applies while the admin has never chosen their own password
+  //  - ADMIN_PASSWORD + RESET_ADMIN=1 forces a reset (remove RESET_ADMIN afterwards)
+  const wanted = process.env.ADMIN_PASSWORD;
+  if (wanted) {
+    const admin = await db.get("SELECT id, password_hash, must_change_password FROM users WHERE username = 'admin'");
+    const mayReset = admin && (admin.must_change_password || process.env.RESET_ADMIN === '1');
+    if (mayReset && !verifyPassword(wanted, admin.password_hash)) {
+      await db.batch([
+        ['UPDATE users SET password_hash = ?, must_change_password = 0, active = 1 WHERE id = ?', [hashPassword(wanted), admin.id]],
+        ['DELETE FROM sessions WHERE user_id = ?', [admin.id]],
+      ]);
+      console.log('\n  ตั้งรหัสผ่านแอดมินใหม่ตามค่า ADMIN_PASSWORD แล้ว\n');
     }
   }
 }

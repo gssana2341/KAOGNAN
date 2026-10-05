@@ -1,11 +1,10 @@
 const express = require('express');
 const crypto = require('crypto');
-const QRCode = require('qrcode');
 const { db } = require('../db');
 const { hashPassword } = require('../password');
 const { destroyUserSessions } = require('../auth');
 const { getSettings, publicSettings, updateSettings, setSetting } = require('../settings');
-const { makePayload } = require('../qr');
+const { makePayload, renderSvg } = require('../qr');
 const { buildReport, lateMinutes, MAX_RANGE_DAYS } = require('../report');
 const { localParts, localToIso, isDate, isTime, daysBetween } = require('../time');
 const { publicUser } = require('./account');
@@ -95,7 +94,7 @@ router.put('/admin/settings', async (req, res) => {
 router.get('/admin/qr', async (req, res) => {
   const s = await getSettings();
   const { payload, expires_in } = makePayload(s);
-  const svg = await QRCode.toString(payload, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#3b2a3f', light: '#ffffff' } });
+  const svg = renderSvg(payload);
   res.set('Cache-Control', 'no-store').json({ svg, payload, expires_in, mode: s.qr_mode, rotate_sec: s.qr_rotate_sec, company_name: s.company_name });
 });
 

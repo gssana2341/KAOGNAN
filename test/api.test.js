@@ -6,10 +6,14 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const net = require('node:net');
 const ExcelJS = require('exceljs');
 
-const PORT = 3400 + Math.floor(Math.random() * 400);
-const BASE = `http://127.0.0.1:${PORT}/api`;
+const freePort = () => new Promise((resolve, reject) => {
+  const s = net.createServer().once('error', reject).listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => resolve(port)); });
+});
+let PORT;
+let BASE;
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kn-test-'));
 let server;
 
@@ -27,6 +31,8 @@ const today = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10)
 const addDays = (d, n) => new Date(new Date(d + 'T00:00:00Z').getTime() + n * 86400e3).toISOString().slice(0, 10);
 
 before(async () => {
+  PORT = await freePort();
+  BASE = `http://127.0.0.1:${PORT}/api`;
   server = spawn(process.execPath, [path.join(__dirname, '..', 'server', 'index.js')], {
     env: { ...process.env, PORT, DATA_DIR: dataDir, MIN_STAY_SEC: '0' }, stdio: ['ignore', 'pipe', 'inherit'],
   });
@@ -37,7 +43,7 @@ before(async () => {
 });
 after(async () => {
   await new Promise((resolve) => { server.once('exit', resolve); server.kill(); });
-  fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  try { fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch { /* temp dir, the OS cleans it up */ }
 });
 
 const ctx = {};
@@ -256,4 +262,74 @@ test('health endpoints', async () => {
   assert.equal(await (await fetch(root + '/healthz')).text(), 'ok');
   const h = await (await fetch(BASE + '/health/db')).json();
   assert.deepEqual(h, { ok: true, database: 'file' });
+});
+
+test('admin password recovery through environment variables', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kn-admin-'));
+  const port = await freePort();
+  const login = async (pw) => (await fetch(`http://127.0.0.1:${port}/api/auth/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: pw }),
+  })).json();
+
+  async function boot(env) {
+    const child = spawn(process.execPath, [path.join(__dirname, '..', 'server', 'index.js')], {
+      env: { ...process.env, PORT: port, DATA_DIR: dir, NODE_ENV: 'production', ADMIN_PASSWORD: '', RESET_ADMIN: '', ...env }, stdio: ['ignore', 'pipe', 'inherit'],
+    });
+    let out = '';
+    await new Promise((resolve, reject) => {
+      child.stdout.on('data', (d) => { out += d; if (/พร้อมใช้งาน/.test(out)) resolve(); });
+      child.on('exit', (c) => reject(new Error('server exited ' + c)));
+    });
+    return { out, stop: () => new Promise((r) => { child.removeAllListeners('exit'); child.once('exit', r); child.kill(); }) };
+  }
+
+  // 1) first start WITHOUT ADMIN_PASSWORD in production: a random password is generated and printed once
+  let s = await boot({});
+  const generated = /รหัสผ่าน (\S+)\s+\(/.exec(s.out)?.[1];
+  assert.ok(generated && generated !== 'admin1234', 'random password, never the well-known default');
+  assert.equal((await login('admin1234')).error, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+  assert.equal((await login(generated)).user.must_change_password, true);
+  await s.stop();
+
+  // 2) the owner sets ADMIN_PASSWORD later: applies because the admin never chose a password
+  s = await boot({ ADMIN_PASSWORD: 'owner-pass-1' });
+  const after = await login('owner-pass-1');
+  assert.equal(after.user.must_change_password, false);
+  assert.ok((await login(generated)).error, 'old generated password no longer works');
+
+  // 3) once the admin changes the password, a different ADMIN_PASSWORD no longer overrides it ...
+  const changed = await fetch(`http://127.0.0.1:${port}/api/me/password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + after.token }, body: JSON.stringify({ current: 'owner-pass-1', next: 'my-own-pass-2' }),
+  });
+  assert.equal(changed.status, 200);
+  await s.stop();
+  s = await boot({ ADMIN_PASSWORD: 'someone-else-3' });
+  assert.ok((await login('someone-else-3')).error);
+  assert.ok((await login('my-own-pass-2')).token);
+  await s.stop();
+
+  // 4) ... unless RESET_ADMIN=1 is set explicitly
+  s = await boot({ ADMIN_PASSWORD: 'recovered-pass-4', RESET_ADMIN: '1' });
+  assert.ok((await login('recovered-pass-4')).token);
+  assert.ok((await login('my-own-pass-2')).error);
+  await s.stop();
+  try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch { /* temp dir */ }
+});
+
+test('the QR drawn by the server decodes back to the exact payload (scannable)', async () => {
+  const jsQR = require('jsqr');
+  const qr = await call('GET', '/admin/qr', { token: ctx.admin });
+  const total = Number(/data-modules="(\d+)"/.exec(qr.svg)[1]);
+  assert.ok(total >= 25 && total <= 45);
+  const SCALE = 8;
+  const size = total * SCALE;
+  const px = new Uint8ClampedArray(size * size * 4).fill(255); // white, opaque
+  const d = /<path d="([^"]+)"/.exec(qr.svg)[1];
+  for (const m of d.matchAll(/M(\d+) (\d+)h(\d+)v1h-\d+z/g)) {
+    const [x, y, w] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    for (let yy = y * SCALE; yy < (y + 1) * SCALE; yy++) {
+      for (let xx = x * SCALE; xx < (x + w) * SCALE; xx++) { const i = (yy * size + xx) * 4; px[i] = px[i + 1] = px[i + 2] = 0; }
+    }
+  }
+  assert.equal(jsQR(px, size, size)?.data, qr.payload);
 });

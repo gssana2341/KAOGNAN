@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const QRCode = require('qrcode');
 
 // Payload format: KN1:<window>:<mac>
 //  static   -> window is 0, the same QR forever (until the admin regenerates the secret)
@@ -30,4 +31,24 @@ function verifyPayload(s, str, now = Date.now()) {
   return crypto.timingSafeEqual(Buffer.from(m[2]), Buffer.from(expected));
 }
 
-module.exports = { makePayload, verifyPayload };
+// Draws the QR ourselves (instead of qrcode's stroke-based SVG) as filled row runs. The client scales it by a whole number
+// of device pixels per module (data-modules = modules per side incl. quiet zone) so edges never come out uneven.
+function renderSvg(text, margin = 2) {
+  const { modules } = QRCode.create(text, { errorCorrectionLevel: 'M' });
+  const n = modules.size;
+  const total = n + margin * 2;
+  let d = '';
+  for (let r = 0; r < n; r++) {
+    let c = 0;
+    while (c < n) {
+      if (!modules.get(r, c)) { c++; continue; }
+      const start = c;
+      while (c < n && modules.get(r, c)) c++;
+      d += `M${start + margin} ${r + margin}h${c - start}v1h-${c - start}z`;
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" data-modules="${total}" shape-rendering="crispEdges" role="img" aria-label="QR ของที่ทำงาน">`
+    + `<rect width="${total}" height="${total}" fill="#fff"/><path d="${d}" fill="#3b2a3f" stroke="#3b2a3f" stroke-width=".03"/></svg>`;
+}
+
+module.exports = { makePayload, verifyPayload, renderSvg };

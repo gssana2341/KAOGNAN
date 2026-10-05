@@ -176,3 +176,22 @@ export function loadScript(src) {
     document.head.append(s);
   });
 }
+
+// Sizes the QR <svg> inside `slot` to a whole number of *device* pixels per module (otherwise modules come out uneven
+// and the code looks wobbly on phones). Returns a function that stops watching.
+export function fitQr(slot) {
+  const svg = slot?.querySelector('svg[data-modules]');
+  if (!svg) return () => {};
+  const n = Number(svg.dataset.modules);
+  const apply = () => {
+    const dpr = window.devicePixelRatio || 1;
+    const cell = Math.max(1, Math.floor((slot.clientWidth * dpr) / n));
+    const px = `${(cell * n) / dpr}px`;
+    svg.style.width = px;
+    svg.style.height = px;
+  };
+  apply();
+  const ro = new ResizeObserver(apply);
+  ro.observe(slot);
+  return () => ro.disconnect();
+}
