@@ -65,9 +65,9 @@ export default function qrScreen(el) {
               ${rotating ? '<div class="countdown no-print p-count"><i></i></div>' : ''}
             </div>
             <ol class="p-steps">
-              <li><span class="n">1</span><span class="ic">${icon('smartphone', 26)}</span><span>เปิดแอป KaoNgan<br>แล้วล็อกอิน</span></li>
-              <li><span class="n">2</span><span class="ic">${icon('qr-code', 26)}</span><span>กดปุ่ม “สแกนเข้างาน”<br>หรือ “สแกนออกงาน”</span></li>
-              <li><span class="n">3</span><span class="ic">${icon('scan-line', 26)}</span><span>เล็งกล้องมาที่ QR นี้<br>รอจนขึ้นว่าสำเร็จ</span></li>
+              <li><span class="n">1</span><span class="ic">${icon('smartphone', 26)}</span><span><span class="ln">เปิดแอป KaoNgan</span><span class="ln">แล้วล็อกอิน</span></span></li>
+              <li><span class="n">2</span><span class="ic">${icon('qr-code', 26)}</span><span><span class="ln">กด “สแกนเข้างาน”</span><span class="ln">หรือ “สแกนออกงาน”</span></span></li>
+              <li><span class="n">3</span><span class="ic">${icon('scan-line', 26)}</span><span><span class="ln">เล็งกล้องมาที่ QR นี้</span><span class="ln">รอจนขึ้นว่าสำเร็จ</span></span></li>
             </ol>
           </div>
           <div class="p-foot">เปิดแอปได้ที่ <b>${esc(host)}</b> · KaoNgan ระบบเช็คอินเข้างาน</div>
