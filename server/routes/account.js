@@ -4,9 +4,9 @@ const path = require('path');
 const { db, DATA_DIR } = require('../db');
 const { hashPassword, verifyPassword } = require('../password');
 const { createSession, destroySession, destroyUserSessions, requireAuth, loginLimiter } = require('../auth');
+const { listBackgrounds, mascotImages } = require('../assets');
 
 const router = express.Router();
-const BG_PRESETS = ['sky', 'candy', 'mint', 'night', 'paws', 'sunny', 'boba', 'lavender'];
 const customBgPath = (id) => path.join(DATA_DIR, 'uploads', `bg-${id}.jpg`);
 
 function publicUser(u) {
@@ -15,6 +15,11 @@ function publicUser(u) {
     position: u.position, role: u.role, track: !!u.track, bg: u.bg, must_change_password: !!u.must_change_password,
   };
 }
+
+// public: the login screen needs the mascot + the last background before anyone is signed in
+router.get('/assets', (req, res) => {
+  res.set('Cache-Control', 'no-cache').json({ backgrounds: listBackgrounds(), mascot: mascotImages() });
+});
 
 router.post('/auth/login', (req, res) => {
   const username = String(req.body?.username ?? '').trim();
@@ -55,7 +60,7 @@ router.post('/me/password', requireAuth, (req, res) => {
 
 router.put('/me/bg', requireAuth, (req, res) => {
   const bg = String(req.body?.bg ?? '');
-  if (bg !== 'custom' && !BG_PRESETS.includes(bg)) return res.status(400).json({ error: 'ไม่พบพื้นหลังนี้' });
+  if (bg !== 'custom' && !listBackgrounds().some((b) => b.id === bg)) return res.status(400).json({ error: 'ไม่พบพื้นหลังนี้' });
   if (bg === 'custom' && !fs.existsSync(customBgPath(req.user.id))) return res.status(400).json({ error: 'ยังไม่ได้อัปโหลดรูป' });
   db.prepare('UPDATE users SET bg = ? WHERE id = ?').run(bg, req.user.id);
   res.json({ ok: true, bg });
@@ -79,4 +84,4 @@ router.get('/me/bg-image', requireAuth, (req, res) => {
   res.set('Cache-Control', 'private, max-age=60').type('image/jpeg').send(fs.readFileSync(p));
 });
 
-module.exports = { router, publicUser, BG_PRESETS };
+module.exports = { router, publicUser };

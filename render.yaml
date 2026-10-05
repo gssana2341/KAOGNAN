@@ -1,0 +1,25 @@
+# Render blueprint: New + → Blueprint → pick this repo. A persistent disk is required for the SQLite database,
+# and Render only offers disks on paid plans — on the free plan the data is wiped on every deploy/restart.
+services:
+  - type: web
+    name: kaongan
+    runtime: node
+    plan: starter
+    buildCommand: npm ci --omit=dev --ignore-scripts
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DATA_DIR
+        value: /var/data
+      - key: ADMIN_PASSWORD # you type this in the Render dashboard (not stored in git)
+        sync: false
+    disk:
+      name: kaongan-data
+      mountPath: /var/data
+      sizeGB: 1

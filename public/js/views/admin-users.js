@@ -1,7 +1,8 @@
 import { api } from '../api.js';
+import { icon } from '../icons.js';
 import { mascot } from '../mascot.js';
-import { badge, busy, esc, formData, openModal, toast } from '../util.js';
-import { adminTabs, initial, invalidateUsers, loadUsers } from './admin-common.js';
+import { avatar, badge, busy, cardTitle, esc, formData, openModal, skeleton, toast } from '../util.js';
+import { adminTabs, invalidateUsers, loadUsers } from './admin-common.js';
 
 export default function users(el, { user: me }) {
   let list = [];
@@ -12,18 +13,18 @@ export default function users(el, { user: me }) {
     el.innerHTML = `
       ${adminTabs('/admin/users')}
       <section class="card">
-        <div class="card-title"><h2>👥 พนักงาน (${list.filter((u) => u.active).length} คน)</h2><button class="btn primary small" id="add">＋ เพิ่มพนักงาน</button></div>
-        <input type="search" id="q" placeholder="ค้นหาชื่อ / รหัส / ชื่อผู้ใช้" value="${esc(q)}" style="margin-bottom:10px">
+        ${cardTitle('users', 'pink', `พนักงาน (${list.filter((u) => u.active).length} คน)`, `<button class="btn primary small" id="add">${icon('plus', 16)}เพิ่มพนักงาน</button>`)}
+        <div class="input-icon" style="margin-bottom:12px">${icon('search', 18)}<input type="search" id="q" placeholder="ค้นหาชื่อ / รหัส / ชื่อผู้ใช้" value="${esc(q)}"></div>
         <div class="list">
           ${shown.length ? shown.map((u) => `
             <div class="item clickable" data-edit="${u.id}" style="${u.active ? '' : 'opacity:.55'}">
-              <div class="person grow"><div class="avatar">${initial(u)}</div>
-                <div><b>${esc(u.full_name)}</b>${u.nickname ? ` <span class="muted">(${esc(u.nickname)})</span>` : ''}
+              <div class="person grow">${avatar(u)}
+                <div style="min-width:0"><b>${esc(u.full_name)}</b>${u.nickname ? ` <span class="muted">(${esc(u.nickname)})</span>` : ''}
                   <div class="small muted">${esc([u.emp_code, u.position, '@' + u.username].filter(Boolean).join(' · '))}</div></div></div>
               <div class="stack" style="align-items:flex-end;gap:4px">
-                ${u.role === 'admin' ? badge('แอดมิน', 'pink') : ''}${u.active ? '' : badge('ปิดใช้งาน', 'mute')}${u.must_change_password ? badge('รหัสชั่วคราว', 'warn') : ''}
+                ${u.role === 'admin' ? badge('แอดมิน', 'pink', 'shield-check') : ''}${u.active ? '' : badge('ปิดใช้งาน', 'mute')}${u.must_change_password ? badge('รหัสชั่วคราว', 'warn', 'key-round') : ''}
               </div>
-            </div>`).join('') : `<div class="empty">${mascot('sleepy', 80)}<p>ไม่พบพนักงาน</p></div>`}
+            </div>`).join('') : `<div class="empty">${mascot('sleepy', 90)}<p>ไม่พบพนักงาน</p></div>`}
         </div>
       </section>`;
     const input = el.querySelector('#q');
@@ -54,7 +55,7 @@ export default function users(el, { user: me }) {
         ${editing ? `<label class="check"><input type="checkbox" name="active" ${u.active ? 'checked' : ''} ${u.id === me.id ? 'disabled' : ''}> เปิดใช้งานบัญชี</label>` : ''}
         <p class="small muted">พนักงานจะถูกบังคับให้ตั้งรหัสผ่านใหม่ตอนเข้าใช้งานครั้งแรก (เมื่อแอดมินตั้งรหัสให้)</p>
         <div class="err" role="alert"></div>
-        <div class="row end"><button type="button" class="btn" data-close>ยกเลิก</button><button class="btn primary">${editing ? 'บันทึก' : 'เพิ่มพนักงาน'}</button></div>
+        <div class="row end"><button type="button" class="btn" data-close>ยกเลิก</button><button class="btn primary">${icon('check', 17)}${editing ? 'บันทึก' : 'เพิ่มพนักงาน'}</button></div>
       </form>`);
     const form = m.el.querySelector('form');
     form.addEventListener('submit', (e) => {
@@ -67,7 +68,7 @@ export default function users(el, { user: me }) {
         try {
           if (editing) await api.put(`/admin/users/${u.id}`, d); else await api.post('/admin/users', d);
           m.close();
-          toast(editing ? 'บันทึกแล้ว' : 'เพิ่มพนักงานแล้ว 🎉');
+          toast(editing ? 'บันทึกแล้ว' : 'เพิ่มพนักงานแล้ว');
           invalidateUsers();
           list = await loadUsers(true);
           draw();
@@ -82,5 +83,6 @@ export default function users(el, { user: me }) {
     if (row) openForm(list.find((u) => u.id === Number(row.dataset.edit)));
   });
 
+  el.innerHTML = adminTabs('/admin/users') + skeleton(2);
   loadUsers(true).then((l) => { list = l; draw(); }).catch((e) => { el.innerHTML = `${adminTabs('/admin/users')}<div class="card empty">${esc(e.message)}</div>`; });
 }

@@ -27,6 +27,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/healthz', (req, res) => res.type('text').send('ok')); // for hosting health checks
+
 const api = express.Router();
 const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean); // e.g. the future mobile app
 api.use((req, res, next) => {
@@ -53,7 +55,14 @@ api.use((req, res) => res.status(404).json({ error: 'ไม่พบ API นี�
 app.use('/api', api);
 
 app.get('/sw.js', (req, res) => res.set('Cache-Control', 'no-cache').sendFile(path.join(__dirname, '..', 'public', 'sw.js')));
-app.use(express.static(path.join(__dirname, '..', 'public'), { maxAge: '1h' }));
+// No build step means no hashed filenames, so code is revalidated (ETag) on every load; fonts/art can be cached.
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  setHeaders(res, file) {
+    if (/\.woff2$/.test(file)) res.setHeader('Cache-Control', 'public, max-age=2592000');
+    else if (/\.(png|webp|jpe?g|avif|svg)$/.test(file)) res.setHeader('Cache-Control', 'public, max-age=3600');
+    else res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {

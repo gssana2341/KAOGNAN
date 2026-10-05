@@ -30,7 +30,7 @@ const people = [
 const s = getSettings();
 const today = localParts().date;
 const insertRec = db.prepare('INSERT OR IGNORE INTO attendance (user_id, work_date, check_in, check_out, late_minutes) VALUES (?, ?, ?, ?, ?)');
-db.prepare(`UPDATE users SET created_at = ? WHERE username != 'admin'`).run(localToIso(addDays(today, -35), '08:00'));
+db.prepare(`UPDATE users SET created_at = ? WHERE username != 'admin'`).run(localToIso(addDays(today, -28), '00:00'));
 
 db.exec('BEGIN');
 for (let i = 28; i >= 0; i--) {

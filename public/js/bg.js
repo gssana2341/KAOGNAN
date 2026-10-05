@@ -1,15 +1,8 @@
 import { api } from './api.js';
+import { assets } from './assets.js';
 
-export const PRESETS = [
-  { id: 'sky', name: 'ฟ้าใสเมฆฟู' },
-  { id: 'candy', name: 'ชมพูหวาน' },
-  { id: 'mint', name: 'มิ้นต์สดชื่น' },
-  { id: 'night', name: 'ราตรีดาวพราว' },
-  { id: 'paws', name: 'รอยเท้าเหมียว' },
-  { id: 'sunny', name: 'ทุ่งดอกเดซี่' },
-  { id: 'boba', name: 'ชานมไข่มุก' },
-  { id: 'lavender', name: 'ลาเวนเดอร์ฟองสบู่' },
-];
+const FALLBACK = [{ id: 'sky', name: 'ฟ้าใสเมฆฟู', file: '/bg/sky.svg', mode: 'cover', tile: 240, thumb: '280px 280px' }];
+export const getBackgrounds = () => (assets.backgrounds.length ? assets.backgrounds : FALLBACK);
 
 const KEY = 'kn_bg';
 let customUrl = null;
@@ -19,20 +12,24 @@ export const lastBg = () => { try { return localStorage.getItem(KEY) || 'sky'; }
 export async function applyBg(id) {
   const el = document.getElementById('bg');
   let url;
+  let size = 'cover';
+  let repeat = 'no-repeat';
   if (id === 'custom') {
     try {
       customUrl ??= URL.createObjectURL(await api.blob('/me/bg-image'));
       url = customUrl;
-    } catch { id = 'sky'; }
+    } catch { id = lastBg(); }
   }
   if (id !== 'custom') {
-    if (!PRESETS.some((p) => p.id === id)) id = 'sky';
-    url = `/bg/${id}.svg`;
+    const bg = getBackgrounds().find((b) => b.id === id) ?? getBackgrounds()[0];
+    id = bg.id;
+    url = bg.file;
+    if (bg.mode === 'tile') { size = `${bg.tile}px`; repeat = 'repeat'; }
   }
-  el.style.backgroundImage = `url("${url}")`;
+  Object.assign(el.style, { backgroundImage: `url("${url}")`, backgroundSize: size, backgroundRepeat: repeat });
   el.dataset.kind = id === 'custom' ? 'photo' : 'preset';
   document.documentElement.dataset.bg = id;
-  try { localStorage.setItem(KEY, id === 'custom' ? 'sky' : id); } catch { /* ignore */ }
+  try { if (id !== 'custom') localStorage.setItem(KEY, id); } catch { /* ignore */ }
 }
 
 export function resetCustomCache() {

@@ -1,4 +1,5 @@
 import { api, setToken } from '../api.js';
+import { icon } from '../icons.js';
 import { mascot } from '../mascot.js';
 import { busy, formData } from '../util.js';
 
@@ -6,14 +7,14 @@ export default function login(el, { onLoggedIn }) {
   el.innerHTML = `
     <div class="login-wrap">
       <form class="card login-card" autocomplete="on">
-        ${mascot('sleepy', 110)}
+        ${mascot('happy', 128)}
         <h1>KaoNgan</h1>
-        <p class="muted">เช็คอินเข้างานแบบน่ารัก ๆ</p>
+        <p class="muted" style="font-weight:600">เช็คอินเข้างานแบบน่ารัก ๆ</p>
         <div class="form">
-          <label class="field">ชื่อผู้ใช้<input name="username" autocomplete="username" autocapitalize="none" required autofocus></label>
-          <label class="field">รหัสผ่าน<input name="password" type="password" autocomplete="current-password" required></label>
+          <label class="field">ชื่อผู้ใช้<span class="input-icon">${icon('user-round', 18)}<input name="username" autocomplete="username" autocapitalize="none" required autofocus></span></label>
+          <label class="field">รหัสผ่าน<span class="input-icon">${icon('lock', 18)}<input name="password" type="password" autocomplete="current-password" required></span></label>
           <div class="err" role="alert"></div>
-          <button class="btn primary block">เข้าสู่ระบบ</button>
+          <button class="btn primary block">${icon('log-in', 18)}เข้าสู่ระบบ</button>
         </div>
       </form>
     </div>`;

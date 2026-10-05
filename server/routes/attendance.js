@@ -3,7 +3,7 @@ const { db } = require('../db');
 const { getSettings, publicSettings } = require('../settings');
 const { verifyPayload } = require('../qr');
 const { buildReport, lateMinutes, hhmm } = require('../report');
-const { localParts, isDate } = require('../time');
+const { localParts, isDate, daysBetween } = require('../time');
 
 const router = express.Router();
 const MIN_STAY_MS = Number(process.env.MIN_STAY_SEC ?? 60) * 1000; // guards against double-scans turning a check-in into a check-out
@@ -58,13 +58,19 @@ router.post('/checkin', (req, res) => {
   res.json({ ok: true, action, state: todayState(req.user.id) });
 });
 
-// My own history for a month (YYYY-MM): daily rows incl. leave/absent days + totals
+// My own history: a month (?month=YYYY-MM) or a custom range (?from=&to=, max 62 days).
+// Returns daily rows incl. leave/absent days + totals.
 router.get('/attendance', (req, res) => {
-  const month = String(req.query.month ?? localParts().date.slice(0, 7));
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return res.status(400).json({ error: 'เดือนไม่ถูกต้อง' });
-  const from = `${month}-01`;
-  const to = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0)).toISOString().slice(0, 10);
-  if (!isDate(from)) return res.status(400).json({ error: 'เดือนไม่ถูกต้อง' });
+  let from, to;
+  if (req.query.from || req.query.to) {
+    ({ from, to } = req.query);
+    if (!isDate(from) || !isDate(to) || to < from || daysBetween(from, to) > 62) return res.status(400).json({ error: 'ช่วงวันที่ไม่ถูกต้อง' });
+  } else {
+    const month = String(req.query.month ?? localParts().date.slice(0, 7));
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return res.status(400).json({ error: 'เดือนไม่ถูกต้อง' });
+    from = `${month}-01`;
+    to = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0)).toISOString().slice(0, 10);
+  }
   const { rows, summary } = buildReport({ from, to, userId: req.user.id });
   res.json({ from, to, rows: rows.reverse(), summary: summary[0] ?? null });
 });

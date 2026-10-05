@@ -210,3 +210,22 @@ test('background selection and custom upload', async () => {
   assert.equal((await call('GET', '/me', { token: t })).user.bg, 'custom');
   assert.equal((await call('POST', '/me/bg-image', { token: t, body: { image: 'data:image/png;base64,AAAA' } })).status, 400);
 });
+
+test('assets: backgrounds are discovered from public/bg, mascot defaults to the built-in cat', async () => {
+  const a = await call('GET', '/assets');
+  assert.equal(a.status, 200, 'public: needed by the login screen');
+  const ids = a.backgrounds.map((b) => b.id);
+  assert.ok(ids.includes('sky') && ids.includes('night'));
+  assert.ok(a.backgrounds.every((b) => /^\/bg\/[\w-]+\.(svg|webp|png|jpe?g|avif)$/i.test(b.file)));
+  assert.equal(a.mascot, null, 'no replacement mascot images installed');
+  assert.equal((await call('PUT', '/me/bg', { token: ctx.malee, body: { bg: ids[3] } })).status, 200);
+});
+
+test('my attendance accepts a custom range (home screen week strip)', async () => {
+  const to = today();
+  const week = await call('GET', `/attendance?from=${addDays(to, -6)}&to=${to}`, { token: ctx.somchai });
+  assert.equal(week.status, 200);
+  assert.ok(week.rows.every((r) => r.date >= addDays(to, -6) && r.date <= to));
+  assert.equal((await call('GET', `/attendance?from=${addDays(to, -100)}&to=${to}`, { token: ctx.somchai })).status, 400, 'max 62 days');
+  assert.equal((await call('GET', `/attendance?from=${to}&to=${addDays(to, -1)}`, { token: ctx.somchai })).status, 400);
+});

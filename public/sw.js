@@ -1,6 +1,6 @@
 // Minimal service worker: lets the app open offline (shell only — check-in itself needs the server).
-// Pages/scripts: network first, fall back to cache. Static art (fonts, backgrounds, icons): cache first. API: never cached.
-const CACHE = 'kaongan-v1';
+// Pages/scripts: network first, fall back to cache. Static art (fonts, backgrounds, icons): stale-while-revalidate. API: never cached.
+const CACHE = 'kaongan-v2';
 const SHELL = ['/', '/css/app.css', '/css/fonts.css', '/js/main.js', '/config.js', '/icons/icon.svg'];
 
 self.addEventListener('install', (e) => {
@@ -18,11 +18,14 @@ self.addEventListener('fetch', (e) => {
 
   const staticArt = /^\/(fonts|bg|icons|vendor)\//.test(url.pathname);
   if (staticArt) {
-    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE).then((c) => c.put(req, copy));
-      return res;
-    })));
+    // stale-while-revalidate: instant from cache, refreshed in the background (so replaced art shows up next visit)
+    e.respondWith(caches.match(req).then((hit) => {
+      const fresh = fetch(req).then((res) => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+        return res;
+      });
+      return hit || fresh;
+    }));
     return;
   }
   e.respondWith(fetch(req).then((res) => {

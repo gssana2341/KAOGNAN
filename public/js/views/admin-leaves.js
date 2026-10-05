@@ -1,8 +1,11 @@
 import { api } from '../api.js';
-import { mascot } from '../mascot.js';
-import { LEAVE_STATUS, LEAVE_TYPES, PART_LABEL, badge, busy, esc, fmtDateShort, fmtDays, formData, openModal, toast } from '../util.js';
-import { adminTabs, initial } from './admin-common.js';
+import { icon } from '../icons.js';
 import { setPendingBadge } from '../main.js';
+import { mascot } from '../mascot.js';
+import {
+  LEAVE_STATUS, LEAVE_TYPES, PART_LABEL, avatar, badge, busy, cardTitle, esc, fmtDateShort, fmtDays, formData, openModal, skeleton, toast,
+} from '../util.js';
+import { adminTabs } from './admin-common.js';
 
 const FILTERS = [['pending', 'รออนุมัติ'], ['approved', 'อนุมัติแล้ว'], ['rejected', 'ไม่อนุมัติ'], ['', 'ทั้งหมด']];
 const range = (l) => (l.start_date === l.end_date ? fmtDateShort(l.start_date) : `${fmtDateShort(l.start_date)} – ${fmtDateShort(l.end_date)}`);
@@ -21,25 +24,25 @@ export default function leaves(el) {
     el.innerHTML = `
       ${adminTabs('/admin/leaves')}
       <section class="card">
-        <div class="card-title"><h2>🌴 ใบลา</h2></div>
+        ${cardTitle('calendar-check', 'mint', 'ใบลา')}
         <div class="chips">${FILTERS.map(([k, label]) => `<button data-f="${k}" class="${k === status ? 'active' : ''}">${label}</button>`).join('')}</div>
       </section>
       <section class="list">
         ${rows.length ? rows.map((l) => `
           <div class="item" style="align-items:flex-start">
-            <div class="avatar">${initial(l)}</div>
+            ${avatar(l)}
             <div class="grow">
               <div><b>${esc(l.full_name)}</b> ${l.emp_code ? `<span class="small muted">${esc(l.emp_code)}</span>` : ''}</div>
-              <div>${LEAVE_TYPES[l.type].icon} ${LEAVE_TYPES[l.type].label} · ${range(l)}${PART_LABEL[l.part]} · <b>${fmtDays(l.days)} วัน</b></div>
+              <div>${icon(LEAVE_TYPES[l.type].icon, 15)} ${LEAVE_TYPES[l.type].label} · ${range(l)}${PART_LABEL[l.part]} · <b>${fmtDays(l.days)} วัน</b></div>
               ${l.reason ? `<div class="small muted">“${esc(l.reason)}”</div>` : ''}
-              ${l.admin_note ? `<div class="small">💬 ${esc(l.admin_note)}</div>` : ''}
+              ${l.admin_note ? `<div class="small">${icon('message-circle', 13)} ${esc(l.admin_note)}</div>` : ''}
               <div class="row" style="margin-top:8px">
-                ${l.status !== 'approved' && l.status !== 'cancelled' ? `<button class="btn small good" data-decide="${l.id}" data-to="approved">✓ อนุมัติ</button>` : ''}
-                ${l.status !== 'rejected' && l.status !== 'cancelled' ? `<button class="btn small danger" data-decide="${l.id}" data-to="rejected">✕ ไม่อนุมัติ</button>` : ''}
+                ${l.status !== 'approved' && l.status !== 'cancelled' ? `<button class="btn small good" data-decide="${l.id}" data-to="approved">${icon('check', 15)}อนุมัติ</button>` : ''}
+                ${l.status !== 'rejected' && l.status !== 'cancelled' ? `<button class="btn small danger" data-decide="${l.id}" data-to="rejected">${icon('x', 15)}ไม่อนุมัติ</button>` : ''}
               </div>
             </div>
-            ${badge(LEAVE_STATUS[l.status].label, LEAVE_STATUS[l.status].cls)}
-          </div>`).join('') : `<div class="card empty">${mascot('happy', 90)}<p>${status === 'pending' ? 'ไม่มีใบลารออนุมัติ เคลียร์หมดแล้ว 🎉' : 'ไม่มีรายการ'}</p></div>`}
+            ${badge(LEAVE_STATUS[l.status].label, LEAVE_STATUS[l.status].cls, LEAVE_STATUS[l.status].icon)}
+          </div>`).join('') : `<div class="card empty">${mascot('happy', 96)}<p>${status === 'pending' ? 'ไม่มีใบลารออนุมัติ เคลียร์หมดแล้ว' : 'ไม่มีรายการ'}</p></div>`}
       </section>`;
   }
 
@@ -70,5 +73,6 @@ export default function leaves(el) {
     if (d) decide(rows.find((r) => r.id === Number(d.dataset.decide)), d.dataset.to);
   });
 
+  el.innerHTML = adminTabs('/admin/leaves') + skeleton(2);
   load().catch((e) => { el.innerHTML = `${adminTabs('/admin/leaves')}<div class="card empty">${esc(e.message)}</div>`; });
 }

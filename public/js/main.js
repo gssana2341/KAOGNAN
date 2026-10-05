@@ -1,7 +1,8 @@
 import { api, hasToken, setToken, setUnauthorizedHandler } from './api.js';
+import { loadAssets } from './assets.js';
 import { applyBg, lastBg, resetCustomCache } from './bg.js';
-import { mascot } from './mascot.js';
-import { $, $$, esc, displayName } from './util.js';
+import { icon } from './icons.js';
+import { $, $$, avatar, displayName, esc, skeleton } from './util.js';
 
 const state = { user: null, pendingBadge: 0 };
 
@@ -46,26 +47,27 @@ setUnauthorizedHandler(() => { state.user = null; navigate('/login'); render(); 
 
 function navItems(user) {
   const items = [
-    { tab: 'home', href: '#/home', icon: '🏠', label: 'หน้าหลัก' },
-    { tab: 'history', href: '#/history', icon: '📅', label: 'ประวัติ' },
-    { tab: 'leave', href: '#/leave', icon: '🌴', label: 'ลางาน' },
+    { tab: 'home', href: '#/home', icon: 'house', label: 'หน้าหลัก' },
+    { tab: 'history', href: '#/history', icon: 'calendar-days', label: 'ประวัติ' },
+    { tab: 'leave', href: '#/leave', icon: 'tree-palm', label: 'ลางาน' },
   ];
-  if (user.role === 'admin') items.push({ tab: 'admin', href: '#/admin', icon: '🛠️', label: 'จัดการ', pending: true });
-  items.push({ tab: 'me', href: '#/me', icon: '🙂', label: 'ฉัน' });
+  if (user.role === 'admin') items.push({ tab: 'admin', href: '#/admin', icon: 'layout-dashboard', label: 'จัดการ', pending: true });
+  items.push({ tab: 'me', href: '#/me', icon: 'user-round', label: 'ฉัน' });
   return items;
 }
 
 function shell(user, activeTab) {
   const items = navItems(user);
   const dot = (it) => (it.pending ? `<span class="dot" data-pending ${state.pendingBadge ? '' : 'hidden'}>${state.pendingBadge}</span>` : '');
+  const link = (i, size) => `<a href="${i.href}" class="${i.tab === activeTab ? 'active' : ''}">${icon(i.icon, size)}<span>${i.label}</span>${dot(i)}</a>`;
   return `
     <header class="topbar no-print">
-      <a class="brand" href="#/home">${mascot('happy', 36)} KaoNgan</a>
-      <nav class="topnav">${items.map((i) => `<a href="${i.href}" class="${i.tab === activeTab ? 'active' : ''}">${i.icon} ${i.label}${dot(i)}</a>`).join('')}</nav>
-      <span class="who">${esc(displayName(user))}</span>
+      <a class="brand" href="#/home"><img src="/icons/icon-192.png" alt="">KaoNgan</a>
+      <nav class="topnav">${items.map((i) => link(i, 18)).join('')}</nav>
+      <a class="who" href="#/me" aria-label="โปรไฟล์">${avatar(user, 34)}<span>${esc(displayName(user))}</span></a>
     </header>
     <main class="page" id="view"></main>
-    <nav class="tabbar no-print">${items.map((i) => `<a href="${i.href}" class="${i.tab === activeTab ? 'active' : ''}"><span class="ic">${i.icon}</span>${i.label}${dot(i)}</a>`).join('')}</nav>`;
+    <nav class="tabbar no-print">${items.map((i) => link(i, 23)).join('')}</nav>`;
 }
 
 async function render() {
@@ -100,6 +102,7 @@ async function render() {
     app.innerHTML = '<main id="view"></main>';
   } else {
     app.innerHTML = shell(state.user, route.tab);
+    $('#view').innerHTML = skeleton(2);
     if (state.user.role === 'admin') api.get('/admin/leaves?status=pending').then((r) => setPendingBadge(r.leaves.length)).catch(() => {});
   }
   window.scrollTo(0, 0);
@@ -109,6 +112,7 @@ async function render() {
 
 async function boot() {
   state.user = null;
+  await loadAssets();
   if (hasToken()) { try { await refreshUser(); } catch { /* handled by render */ } }
   else await applyBg(lastBg());
   if (currentPath() === '/login' && hasToken()) navigate('/home');

@@ -1,4 +1,5 @@
-import { esc, loadScript } from './util.js';
+import { icon } from './icons.js';
+import { buzz, esc, loadScript } from './util.js';
 
 let jsqrReady = null;
 const ensureJsQR = () => (jsqrReady ??= loadScript('/vendor/jsQR.js'));
@@ -34,23 +35,26 @@ export function openScanner(title, handler) {
     const root = document.createElement('div');
     root.className = 'scanner';
     root.innerHTML = `
-      <div class="scanner-top"><b>${esc(title)}</b><button class="btn small" data-x>ปิด ✕</button></div>
+      <div class="scanner-top"><b>${icon('scan-line', 20)} ${esc(title)}</b>
+        <div class="row"><button class="btn small" data-torch hidden>${icon('flashlight', 16)}ไฟฉาย</button><button class="btn small" data-x>${icon('x', 16)}ปิด</button></div></div>
       <div class="scanner-view">
         <video playsinline muted></video>
         <div class="frame"><i></i><i></i><i></i><i></i><span class="line"></span></div>
       </div>
       <div class="scanner-msg" aria-live="polite">กำลังเปิดกล้อง…</div>
       <div class="scanner-bottom">
-        <label class="btn photo">📷 ถ่ายรูป QR แทน<input type="file" accept="image/*" capture="environment" hidden></label>
+        <label class="btn photo">${icon('camera', 18)}ถ่ายรูป QR แทน<input type="file" accept="image/*" capture="environment" hidden></label>
       </div>`;
     document.body.append(root);
 
     const video = root.querySelector('video');
     const msg = root.querySelector('.scanner-msg');
+    const torchBtn = root.querySelector('[data-torch]');
     const setMsg = (t, cls = '') => { msg.textContent = t; msg.className = `scanner-msg ${cls}`; };
     let stream = null;
     let stopped = false;
     let busy = false;
+    let torchOn = false;
 
     const finish = (ok) => {
       if (stopped) return;
@@ -63,10 +67,12 @@ export function openScanner(title, handler) {
     async function submit(text) {
       if (busy || stopped) return;
       busy = true;
+      buzz(30);
       setMsg('กำลังตรวจสอบ…');
       try {
         const r = await handler(text);
         if (r.done) return finish(true);
+        buzz([60, 40, 60]);
         setMsg(r.message, 'bad');
       } catch (e) {
         setMsg(e.message || 'เกิดข้อผิดพลาด', 'bad');
@@ -75,6 +81,11 @@ export function openScanner(title, handler) {
     }
 
     root.querySelector('[data-x]').addEventListener('click', () => finish(false));
+    torchBtn.addEventListener('click', async () => {
+      torchOn = !torchOn;
+      try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: torchOn }] }); } catch { torchOn = !torchOn; }
+      torchBtn.innerHTML = `${icon(torchOn ? 'flashlight-off' : 'flashlight', 16)}${torchOn ? 'ปิดไฟ' : 'ไฟฉาย'}`;
+    });
     root.querySelector('input[type=file]').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       e.target.value = '';
@@ -102,6 +113,7 @@ export function openScanner(title, handler) {
       video.srcObject = stream;
       await video.play().catch(() => {});
       setMsg('เล็งกล้องไปที่ QR ของที่ทำงาน');
+      try { if (stream.getVideoTracks()[0].getCapabilities?.().torch) torchBtn.hidden = false; } catch { /* no torch */ }
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });

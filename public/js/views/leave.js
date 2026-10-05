@@ -1,10 +1,10 @@
 import { api } from '../api.js';
+import { icon } from '../icons.js';
 import { mascot } from '../mascot.js';
 import {
-  LEAVE_STATUS, LEAVE_TYPES, PART_LABEL, addDays, badge, busy, confirmBox, esc, fmtDateShort, fmtDays, formData, toast,
+  LEAVE_STATUS, LEAVE_TYPES, PART_LABEL, addDays, badge, busy, cardTitle, confirmBox, esc, fmtDateShort, fmtDays, formData, iconChip, skeleton, toast, todayStr,
 } from '../util.js';
 
-const todayStr = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
 const range = (l) => (l.start_date === l.end_date ? fmtDateShort(l.start_date) : `${fmtDateShort(l.start_date)} – ${fmtDateShort(l.end_date)}`);
 
 export default function leave(el) {
@@ -22,12 +22,11 @@ export default function leave(el) {
     const keep = oldForm ? formData(oldForm) : {};
     el.innerHTML = `
       <section class="card">
-        <div class="card-title"><h2>🌴 ขอลาออนไลน์</h2></div>
+        ${cardTitle('send', 'mint', 'ขอลาออนไลน์')}
         <form class="form" id="leave-form">
-          <div>
-            <div class="seg">${Object.entries(LEAVE_TYPES).map(([k, v], i) => `
-              <input type="radio" name="type" id="t-${k}" value="${k}" ${(keep.type ?? 'sick') === k ? 'checked' : ''} ${i === 0 ? 'required' : ''}><label for="t-${k}">${v.icon} ${v.label}</label>`).join('')}
-            </div>
+          <div class="type-grid">${Object.entries(LEAVE_TYPES).map(([k, v]) => `
+            <input type="radio" name="type" id="t-${k}" value="${k}" ${(keep.type ?? 'sick') === k ? 'checked' : ''}>
+            <label class="type-tile" for="t-${k}">${iconChip(v.icon, v.tone, 22)}${v.label}</label>`).join('')}
           </div>
           <div class="two keep">
             <label class="field">ตั้งแต่วันที่<input type="date" name="start_date" value="${keep.start_date ?? today}" min="${addDays(today, -60)}" required></label>
@@ -39,29 +38,30 @@ export default function leave(el) {
             <input type="radio" name="part" id="p-pm" value="pm"><label for="p-pm">ครึ่งวันบ่าย</label>
           </div>
           <label class="field">เหตุผล (ไม่บังคับ)<textarea name="reason" maxlength="500" placeholder="เช่น ไปพบแพทย์ / ธุระครอบครัว">${esc(keep.reason ?? '')}</textarea></label>
-          <div class="row between"><b id="days-info" class="muted"></b><button class="btn primary">ส่งใบลา</button></div>
+          <div class="row between"><span class="days-pill" id="days-info"></span><button class="btn primary">${icon('send', 17)}ส่งใบลา</button></div>
         </form>
       </section>
 
       <section class="card">
-        <div class="card-title"><h3>สรุปการลาปี ${Number(year) + 543}</h3></div>
-        <div class="stats">${Object.entries(LEAVE_TYPES).map(([k, v]) => `<div class="stat"><b>${fmtDays(used[k] ?? 0)}</b><span>${v.icon} ${v.label} (วัน)</span></div>`).join('')}</div>
+        ${cardTitle('list-checks', 'lav', `สรุปการลาปี ${Number(year) + 543}`)}
+        <div class="stats">${Object.entries(LEAVE_TYPES).map(([k, v]) => `<div class="stat">${iconChip(v.icon, v.tone, 17)}<b>${fmtDays(used[k] ?? 0)}</b><span>${v.label} (วัน)</span></div>`).join('')}</div>
       </section>
 
       <section class="list">
         <h3 style="margin:6px 4px 0">ใบลาของฉัน</h3>
         ${leaves.length ? leaves.map((l) => `
-          <div class="item" style="align-items:flex-start">
+          <div class="item s-${{ approved: 'ok', rejected: 'bad', pending: 'warn', cancelled: '' }[l.status]}" style="align-items:flex-start">
+            ${iconChip(LEAVE_TYPES[l.type].icon, LEAVE_TYPES[l.type].tone, 20)}
             <div class="grow">
-              <div><b>${LEAVE_TYPES[l.type].icon} ${LEAVE_TYPES[l.type].label}</b> · ${range(l)}${PART_LABEL[l.part]} · ${fmtDays(l.days)} วัน</div>
+              <div><b>${LEAVE_TYPES[l.type].label}</b> · ${range(l)}${PART_LABEL[l.part]} · ${fmtDays(l.days)} วัน</div>
               ${l.reason ? `<div class="small muted">${esc(l.reason)}</div>` : ''}
-              ${l.admin_note ? `<div class="small">💬 ${esc(l.admin_note)}</div>` : ''}
+              ${l.admin_note ? `<div class="small" style="margin-top:2px">${icon('message-circle', 13)} ${esc(l.admin_note)}</div>` : ''}
             </div>
             <div class="stack" style="align-items:flex-end">
-              ${badge(LEAVE_STATUS[l.status].label, LEAVE_STATUS[l.status].cls)}
+              ${badge(LEAVE_STATUS[l.status].label, LEAVE_STATUS[l.status].cls, LEAVE_STATUS[l.status].icon)}
               ${l.status === 'pending' ? `<button class="btn small danger" data-cancel="${l.id}">ยกเลิก</button>` : ''}
             </div>
-          </div>`).join('') : `<div class="card empty">${mascot('happy', 90)}<p>ยังไม่เคยขอลา</p></div>`}
+          </div>`).join('') : `<div class="card empty">${mascot('happy', 96)}<p>ยังไม่เคยขอลา</p></div>`}
       </section>`;
     wire();
   }
@@ -82,7 +82,7 @@ export default function leave(el) {
       let n = 0;
       for (let d = start.value; d <= end.value && n < 400; d = addDays(d, 1)) if (workdays.includes(new Date(d + 'T00:00:00Z').getUTCDay())) n++;
       if (single && form.elements.part.value !== 'full') n *= 0.5;
-      info.textContent = n ? `รวม ${fmtDays(n)} วัน` : 'ช่วงนี้ไม่มีวันทำงาน';
+      info.innerHTML = n ? `${icon('hourglass', 15)}รวม ${fmtDays(n)} วัน` : `${icon('calendar-x', 15)}ช่วงนี้ไม่มีวันทำงาน`;
     }
     form.addEventListener('input', refresh);
     refresh();
@@ -92,7 +92,7 @@ export default function leave(el) {
       busy(form.querySelector('.btn.primary'), async () => {
         const d = formData(form);
         await api.post('/leaves', { type: d.type, start_date: d.start_date, end_date: d.end_date, part: d.part, reason: d.reason });
-        toast('ส่งใบลาแล้ว รอผู้ดูแลอนุมัตินะ 💌');
+        toast('ส่งใบลาแล้ว รอผู้ดูแลอนุมัตินะ');
         el.querySelector('form').reset();
         await load();
       });
@@ -103,5 +103,6 @@ export default function leave(el) {
     }));
   }
 
+  el.innerHTML = skeleton(2);
   load().catch((e) => { el.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
 }

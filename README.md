@@ -39,6 +39,22 @@ npm start          # เปิด http://localhost:3000
 - **ใช้งานจริง:** วางหลัง HTTPS ที่ถูกต้อง เช่น Cloudflare Tunnel (ฟรี), Caddy, nginx + Let's Encrypt หรือโฮสต์บน VPS/Render/Railway
   (ถ้าอยู่หลัง proxy ตั้ง `TRUST_PROXY=1` เพื่อให้ตัวจำกัดการล็อกอินผิดเห็น IP จริง)
 
+## ดีพลอยขึ้นเว็บจริง
+
+ระบบนี้ต้องมี **เซิร์ฟเวอร์ Node ที่รันตลอดเวลา + ดิสก์ที่เก็บไฟล์ได้ถาวร** (ฐานข้อมูลคือไฟล์ SQLite)
+จึง **ใช้กับ Vercel / Netlify / Cloudflare Pages / GitHub Pages ไม่ได้** — โฮสต์เหล่านั้นเสิร์ฟได้แค่ไฟล์หน้าเว็บ หน้าล็อกอินจะขึ้นแต่กดล็อกอินแล้วได้ `404`
+(เพราะ `/api/...` ไม่มีเซิร์ฟเวอร์รอรับ) ให้ใช้โฮสต์แบบรัน Node/Docker แทน:
+
+| โฮสต์ | วิธี |
+|---|---|
+| **Render** | New + → **Blueprint** → เลือกรีโปนี้ (ใช้ `render.yaml`) แล้วตั้ง `ADMIN_PASSWORD` ในหน้า Dashboard — ดิสก์ถาวรต้องใช้แพ็กเกจเสียเงิน ถ้าใช้ฟรี ข้อมูลจะหายทุกครั้งที่รีสตาร์ต/ดีพลอย |
+| **Railway / Fly.io** | ดีพลอยจาก `Dockerfile` ผูก Volume ไปที่ `/data` แล้วตั้ง env ด้านล่าง |
+| **VPS** | `git clone` → `npm ci --omit=dev --ignore-scripts` → `NODE_ENV=production npm start` หลัง Nginx/Caddy ที่เปิด HTTPS (ส่ง `/` ทั้งหมดไปที่พอร์ต Node ไม่ใช่เฉพาะ `/api`) |
+
+ตั้ง environment variables บนโฮสต์: `NODE_ENV=production`, `ADMIN_PASSWORD=<รหัสแอดมินของคุณ>`, `TRUST_PROXY=1`, `DATA_DIR=<โฟลเดอร์ของดิสก์ถาวร>`
+— ถ้าไม่ตั้ง `ADMIN_PASSWORD` ในโหมด production ระบบจะ **สุ่มรหัสแอดมินแล้วพิมพ์ใน log ครั้งเดียว** (ไม่ใช้ `admin1234` เพื่อกันคนแปลกหน้าล็อกอินตัดหน้า)
+ตรวจว่าขึ้นแล้ว: เปิด `https://<โดเมนของคุณ>/healthz` ต้องเห็นคำว่า `ok`
+
 ## Excel
 
 **จัดการ → เวลาเข้างาน & Excel** เลือกช่วงวันที่ (และเลือกรายคนได้) แล้วกด “ดาวน์โหลด Excel” ได้ 3 ชีต:
@@ -55,6 +71,8 @@ npm start          # เปิด http://localhost:3000
 | ตัวแปร | ค่าเริ่มต้น | ใช้ทำอะไร |
 |---|---|---|
 | `PORT` | `3000` | พอร์ต |
+| `NODE_ENV` | – | ตั้งเป็น `production` บนเซิร์ฟเวอร์จริง (ไม่ใช้รหัสแอดมินเริ่มต้นที่เดาง่าย) |
+| `ADMIN_PASSWORD` | – | รหัสแอดมินตอนสร้างระบบครั้งแรก (ไม่ตั้ง: เครื่องตัวเอง = `admin1234`, production = สุ่มแล้วพิมพ์ใน log) |
 | `DATA_DIR` | `./data` | ที่เก็บฐานข้อมูล SQLite (`kaongan.db`) และรูปพื้นหลังที่อัปโหลด — **สำรองโฟลเดอร์นี้** |
 | `TRUST_PROXY` | – | ตั้งเป็น `1` เมื่ออยู่หลัง reverse proxy |
 | `CORS_ORIGINS` | – | origin ของแอปมือถือ (คั่นด้วย `,`) ที่อนุญาตให้เรียก API |
@@ -66,9 +84,17 @@ npm start          # เปิด http://localhost:3000
 ```
 server/    Express + SQLite (better-sqlite3), API ทั้งหมดอยู่ใต้ /api (Bearer token)
 public/    หน้าเว็บ (ไม่ต้อง build): js/views/* แต่ละหน้า, bg/* พื้นหลัง SVG, manifest + service worker
-scripts/   seed-demo, make-cert, make-icons, copy-vendor
+scripts/   seed-demo, make-cert, make-icons (ไอคอนแอป), build-icons (ไอคอน UI), copy-vendor
+docs/      image-prompts.md — prompt ทำมาสคอต/ไอคอน/พื้นหลัง
 test/      ทดสอบ API ครบเส้นทางหลัก
 ```
+
+## ปรับหน้าตา / ใส่รูปของตัวเอง
+
+มาสคอตแมว ไอคอนแอป และพื้นหลังที่ให้มาเป็น SVG ที่วาดไว้ในตัว ถ้าอยากได้รูปสวย ๆ จาก AI วางไฟล์ตามตำแหน่งได้เลยโดยไม่ต้องแก้โค้ด
+ดู prompt สำเร็จรูป ขนาดไฟล์ และขั้นตอนใน [docs/image-prompts.md](docs/image-prompts.md)
+
+- ไอคอน UI ทั้งหมดใช้ [Lucide](https://lucide.dev) (ISC) — เพิ่มไอคอนใหม่: ใส่ชื่อใน `scripts/build-icons.js` แล้ว `npm run icons`
 
 ## ต่อยอดเป็นแอป
 

@@ -1,17 +1,17 @@
 import { api } from '../api.js';
-import { esc } from '../util.js';
+import { icon } from '../icons.js';
 
 const TABS = [
-  ['/admin', 'ภาพรวม'],
-  ['/admin/users', 'พนักงาน'],
-  ['/admin/attendance', 'เวลาเข้างาน & Excel'],
-  ['/admin/leaves', 'ใบลา'],
-  ['/admin/settings', 'ตั้งค่า & QR'],
+  ['/admin', 'layout-dashboard', 'ภาพรวม'],
+  ['/admin/users', 'users', 'พนักงาน'],
+  ['/admin/attendance', 'file-spreadsheet', 'เวลา & Excel'],
+  ['/admin/leaves', 'calendar-check', 'ใบลา'],
+  ['/admin/settings', 'settings', 'ตั้งค่า & QR'],
 ];
 
 export const adminTabs = (active) => `
-  <nav class="chips no-print" aria-label="เมนูผู้ดูแล">
-    ${TABS.map(([p, label]) => `<a href="#${p}" class="${p === active ? 'active' : ''}">${label}${p === '/admin/leaves' ? '<span class="dot" data-pending hidden></span>' : ''}</a>`).join('')}
+  <nav class="chips scroll no-print" aria-label="เมนูผู้ดูแล">
+    ${TABS.map(([p, ic, label]) => `<a href="#${p}" class="${p === active ? 'active' : ''}">${icon(ic, 16)}${label}${p === '/admin/leaves' ? '<span class="dot" data-pending hidden></span>' : ''}</a>`).join('')}
   </nav>`;
 
 let usersCache = null;
@@ -22,4 +22,3 @@ export async function loadUsers(force = false) {
 export const invalidateUsers = () => { usersCache = null; };
 
 export const userLabel = (u) => `${u.emp_code ? u.emp_code + ' · ' : ''}${u.full_name}`;
-export const initial = (u) => esc((u.nickname || u.full_name)[0] ?? '?');

@@ -74,10 +74,17 @@ if (!db.prepare("SELECT 1 FROM settings WHERE key = 'qr_secret'").get()) {
   db.prepare("INSERT INTO settings (key, value) VALUES ('qr_secret', ?)").run(crypto.randomBytes(32).toString('hex'));
 }
 
+// First run: create the admin. On a public server a well-known default password would let anyone who
+// logs in first take over the system, so in production it comes from ADMIN_PASSWORD or is random (printed once).
 if (!db.prepare('SELECT 1 FROM users LIMIT 1').get()) {
+  const fromEnv = process.env.ADMIN_PASSWORD;
+  const production = process.env.NODE_ENV === 'production';
+  const password = fromEnv || (production ? crypto.randomBytes(9).toString('base64url') : 'admin1234');
   db.prepare(`INSERT INTO users (username, password_hash, full_name, nickname, role, track, must_change_password)
-              VALUES ('admin', ?, 'ผู้ดูแลระบบ', 'แอดมิน', 'admin', 0, 1)`).run(hashPassword('admin1234'));
-  console.log('\n  สร้างบัญชีแอดมินเริ่มต้นแล้ว:  ชื่อผู้ใช้ admin  /  รหัสผ่าน admin1234  (ระบบจะบังคับให้เปลี่ยนรหัสผ่านตอนเข้าครั้งแรก)\n');
+              VALUES ('admin', ?, 'ผู้ดูแลระบบ', 'แอดมิน', 'admin', 0, ?)`).run(hashPassword(password), fromEnv ? 0 : 1);
+  console.log(fromEnv
+    ? '\n  สร้างบัญชีแอดมินแล้ว: ชื่อผู้ใช้ admin / รหัสผ่านตามที่ตั้งใน ADMIN_PASSWORD\n'
+    : `\n  สร้างบัญชีแอดมินเริ่มต้นแล้ว:  ชื่อผู้ใช้ admin  /  รหัสผ่าน ${password}  (ระบบจะบังคับให้เปลี่ยนรหัสผ่านตอนเข้าครั้งแรก)\n`);
 }
 
 module.exports = { db, DATA_DIR };

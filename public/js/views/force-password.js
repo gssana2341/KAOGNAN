@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { icon } from '../icons.js';
 import { mascot } from '../mascot.js';
 import { busy, formData, toast } from '../util.js';
 
@@ -7,15 +8,15 @@ export default function forcePassword(el, { onDone }) {
   el.innerHTML = `
     <div class="login-wrap">
       <form class="card login-card">
-        ${mascot('oops', 100)}
-        <h2>ตั้งรหัสผ่านใหม่ก่อนนะ</h2>
-        <p class="muted">รหัสผ่านปัจจุบันเป็นรหัสชั่วคราว เพื่อความปลอดภัยกรุณาตั้งรหัสผ่านของตัวเอง</p>
+        ${mascot('oops', 120)}
+        <h2 style="margin-top:8px">ตั้งรหัสผ่านใหม่ก่อนนะ</h2>
+        <p class="muted" style="font-weight:600">รหัสผ่านตอนนี้เป็นรหัสชั่วคราว เพื่อความปลอดภัยกรุณาตั้งรหัสผ่านของตัวเอง</p>
         <div class="form">
-          <label class="field">รหัสผ่านปัจจุบัน<input name="current" type="password" autocomplete="current-password" required></label>
-          <label class="field">รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)<input name="next" type="password" autocomplete="new-password" minlength="6" required></label>
-          <label class="field">ยืนยันรหัสผ่านใหม่<input name="again" type="password" autocomplete="new-password" required></label>
+          <label class="field">รหัสผ่านปัจจุบัน<span class="input-icon">${icon('lock', 18)}<input name="current" type="password" autocomplete="current-password" required></span></label>
+          <label class="field">รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)<span class="input-icon">${icon('key-round', 18)}<input name="next" type="password" autocomplete="new-password" minlength="6" required></span></label>
+          <label class="field">ยืนยันรหัสผ่านใหม่<span class="input-icon">${icon('shield-check', 18)}<input name="again" type="password" autocomplete="new-password" required></span></label>
           <div class="err" role="alert"></div>
-          <button class="btn primary block">บันทึกรหัสผ่าน</button>
+          <button class="btn primary block">${icon('check', 18)}บันทึกรหัสผ่าน</button>
         </div>
       </form>
     </div>`;
@@ -28,7 +29,7 @@ export default function forcePassword(el, { onDone }) {
     busy(form.querySelector('.btn'), async () => {
       try {
         await api.post('/me/password', { current: d.current, next: d.next });
-        toast('เปลี่ยนรหัสผ่านแล้ว 🎉');
+        toast('เปลี่ยนรหัสผ่านแล้ว');
         await onDone();
       } catch (ex) { err.textContent = ex.message; }
     });
