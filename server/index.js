@@ -1,4 +1,4 @@
-// Starts the app as a normal long-running server (local dev, VPS, Docker). On Vercel see api/[...path].js instead.
+// Starts the app as a normal long-running server (local dev, VPS, Docker). On Vercel see api/index.js instead.
 const fs = require('fs');
 const http = require('http');
 const https = require('https');

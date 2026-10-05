@@ -1,5 +1,5 @@
 // The Express application, without a listening socket: server/index.js runs it locally / on a VPS / in Docker,
-// api/[...path].js runs it as a Vercel serverless function.
+// api/index.js runs it as a Vercel serverless function.
 const express = require('express');
 const path = require('path');
 
