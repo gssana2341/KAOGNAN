@@ -2,9 +2,9 @@ FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
 
-# runtime dependencies only. --ignore-scripts: better-sqlite3 ships prebuilt binaries inside the package, so no compiler/Python is needed
+# runtime dependencies only (libSQL ships prebuilt native binaries, no compiler needed)
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm ci --omit=dev
 
 COPY server ./server
 COPY public ./public

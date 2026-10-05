@@ -4,33 +4,32 @@ const { db } = require('./db');
 const SESSION_DAYS = 30;
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
-function createSession(userId) {
+async function createSession(userId) {
   const token = crypto.randomBytes(32).toString('base64url');
   const expires = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
-  db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)').run(sha(token), userId, expires);
-  db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(new Date().toISOString());
+  await db.batch([
+    ['INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)', [sha(token), userId, expires]],
+    ['DELETE FROM sessions WHERE expires_at < ?', [new Date().toISOString()]],
+  ]);
   return token;
 }
 
-function destroySession(token) {
-  db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha(token));
-}
+const destroySession = (token) => db.run('DELETE FROM sessions WHERE token_hash = ?', [sha(token)]);
 
-function destroyUserSessions(userId, exceptToken) {
-  db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(userId, exceptToken ? sha(exceptToken) : '');
-}
+const destroyUserSessions = (userId, exceptToken) =>
+  db.run('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?', [userId, exceptToken ? sha(exceptToken) : '']);
 
 function bearer(req) {
   const m = /^Bearer (.+)$/.exec(req.headers.authorization || '');
   return m ? m[1] : null;
 }
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const token = bearer(req);
   if (!token) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบ' });
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id
-    WHERE s.token_hash = ? AND s.expires_at > ? AND u.active = 1`).get(sha(token), new Date().toISOString());
+    WHERE s.token_hash = ? AND s.expires_at > ? AND u.active = 1`, [sha(token), new Date().toISOString()]);
   if (!row) return res.status(401).json({ error: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' });
   req.user = row;
   req.token = token;
@@ -48,22 +47,30 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Tiny in-memory limiter for login attempts: max `limit` failures per key per window.
+// Login rate limit, stored in the database so every serverless instance sees the same counters.
+// `limits` maps a key (e.g. "ip:1.2.3.4") to the number of failures allowed per window.
 const WINDOW_MS = 15 * 60000;
-const fails = new Map();
-function loginLimiter(key, limit = 8, windowMs = WINDOW_MS) {
-  const now = Date.now();
-  const rec = (fails.get(key) || []).filter((t) => now - t < windowMs);
-  return {
-    blocked: rec.length >= limit,
-    fail: () => { rec.push(Date.now()); fails.set(key, rec); },
-    reset: () => fails.delete(key),
-  };
-}
-// Drop stale entries so spraying random usernames can't grow the map forever.
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, rec] of fails) if (!rec.length || now - rec[rec.length - 1] > WINDOW_MS) fails.delete(k);
-}, 10 * 60000).unref();
 
-module.exports = { createSession, destroySession, destroyUserSessions, requireAuth, requirePasswordChanged, requireAdmin, loginLimiter, bearer };
+async function loginBlocked(limits) {
+  const keys = Object.keys(limits);
+  const rows = await db.all(
+    `SELECT key, COUNT(*) AS n FROM login_fails WHERE key IN (${keys.map(() => '?').join(',')}) AND at > ? GROUP BY key`,
+    [...keys, Date.now() - WINDOW_MS],
+  );
+  return rows.some((r) => r.n >= limits[r.key]);
+}
+
+function loginFailed(keys) {
+  const now = Date.now();
+  return db.batch([
+    ...keys.map((k) => ['INSERT INTO login_fails (key, at) VALUES (?, ?)', [k, now]]),
+    ['DELETE FROM login_fails WHERE at < ?', [now - WINDOW_MS]],
+  ]);
+}
+
+const loginSucceeded = (key) => db.run('DELETE FROM login_fails WHERE key = ?', [key]);
+
+module.exports = {
+  createSession, destroySession, destroyUserSessions, requireAuth, requirePasswordChanged, requireAdmin,
+  loginBlocked, loginFailed, loginSucceeded, bearer,
+};

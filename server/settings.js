@@ -11,8 +11,8 @@ const DEFAULTS = {
   qr_rotate_sec: '60',
 };
 
-function getSettings() {
-  const rows = Object.fromEntries(db.prepare('SELECT key, value FROM settings').all().map((r) => [r.key, r.value]));
+async function getSettings() {
+  const rows = Object.fromEntries((await db.all('SELECT key, value FROM settings')).map((r) => [r.key, r.value]));
   const s = { ...DEFAULTS, ...rows };
   return {
     company_name: s.company_name,
@@ -26,17 +26,16 @@ function getSettings() {
   };
 }
 
-function publicSettings(s = getSettings()) {
+function publicSettings(s) {
   const { qr_secret, ...rest } = s;
   return rest;
 }
 
-function setSetting(key, value) {
-  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value));
-}
+const UPSERT = 'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value';
+const setSetting = (key, value) => db.run(UPSERT, [key, String(value)]);
 
 // Returns an error message or null; applies the patch when valid.
-function updateSettings(p) {
+async function updateSettings(p) {
   const out = {};
   if (p.company_name !== undefined) {
     const v = String(p.company_name).trim();
@@ -69,9 +68,9 @@ function updateSettings(p) {
     if (!Number.isInteger(n) || n < 15 || n > 600) return 'รอบเปลี่ยน QR ต้องอยู่ระหว่าง 15-600 วินาที';
     out.qr_rotate_sec = n;
   }
-  const s = { ...getSettings(), ...Object.fromEntries(Object.entries(out).map(([k, v]) => [k, k === 'workdays' ? v.split(',').map(Number) : v])) };
-  if (s.work_start >= s.work_end) return 'เวลาเริ่มงานต้องมาก่อนเวลาเลิกงาน';
-  for (const [k, v] of Object.entries(out)) setSetting(k, v);
+  const merged = { ...(await getSettings()), ...Object.fromEntries(Object.entries(out).map(([k, v]) => [k, k === 'workdays' ? v.split(',').map(Number) : v])) };
+  if (merged.work_start >= merged.work_end) return 'เวลาเริ่มงานต้องมาก่อนเวลาเลิกงาน';
+  if (Object.keys(out).length) await db.batch(Object.entries(out).map(([k, v]) => [UPSERT, [k, String(v)]]));
   return null;
 }
 

@@ -49,71 +49,73 @@ function validateUser(b, { creating }) {
   return { out };
 }
 
-router.get('/admin/users', (req, res) => {
-  const users = db.prepare('SELECT * FROM users ORDER BY active DESC, emp_code, full_name').all().map((u) => ({ ...publicUser(u), active: !!u.active }));
+router.get('/admin/users', async (req, res) => {
+  const users = (await db.all('SELECT * FROM users ORDER BY active DESC, emp_code, full_name')).map((u) => ({ ...publicUser(u), active: !!u.active }));
   res.json({ users });
 });
 
-router.post('/admin/users', (req, res) => {
+router.post('/admin/users', async (req, res) => {
   const { out, error } = validateUser(req.body ?? {}, { creating: true });
   if (error) return res.status(400).json({ error });
-  if (db.prepare('SELECT 1 FROM users WHERE username = ?').get(out.username)) return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
+  if (await db.get('SELECT 1 AS x FROM users WHERE username = ?', [out.username])) return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
   const cols = Object.keys(out);
-  const info = db.prepare(`INSERT INTO users (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`).run(...Object.values(out));
+  const info = await db.run(`INSERT INTO users (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`, Object.values(out));
   res.json({ ok: true, id: info.lastInsertRowid });
 });
 
-router.put('/admin/users/:id', (req, res) => {
+router.put('/admin/users/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const target = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  const target = await db.get('SELECT * FROM users WHERE id = ?', [id]);
   if (!target) return res.status(404).json({ error: 'ไม่พบพนักงาน' });
   const { out, error } = validateUser(req.body ?? {}, { creating: false });
   if (error) return res.status(400).json({ error });
-  if (out.username && db.prepare('SELECT 1 FROM users WHERE username = ? AND id != ?').get(out.username, id)) {
+  if (out.username && await db.get('SELECT 1 AS x FROM users WHERE username = ? AND id != ?', [out.username, id])) {
     return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
   }
   const losesAdmin = target.role === 'admin' && target.active && (out.role === 'employee' || out.active === 0);
-  if (losesAdmin && db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'admin' AND active = 1").get().n <= 1) {
+  if (losesAdmin && (await db.get("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND active = 1")).n <= 1) {
     return res.status(400).json({ error: 'ต้องมีผู้ดูแลระบบที่ใช้งานอยู่อย่างน้อย 1 คน' });
   }
   const cols = Object.keys(out);
-  if (cols.length) db.prepare(`UPDATE users SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`).run(...Object.values(out), id);
-  if (out.password_hash || out.active === 0) destroyUserSessions(id);
+  if (cols.length) await db.run(`UPDATE users SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`, [...Object.values(out), id]);
+  if (out.password_hash || out.active === 0) await destroyUserSessions(id);
   res.json({ ok: true });
 });
 
 /* ---------- settings + QR ---------- */
 
-router.get('/admin/settings', (req, res) => res.json({ settings: publicSettings() }));
+router.get('/admin/settings', async (req, res) => res.json({ settings: publicSettings(await getSettings()) }));
 
-router.put('/admin/settings', (req, res) => {
-  const error = updateSettings(req.body ?? {});
+router.put('/admin/settings', async (req, res) => {
+  const error = await updateSettings(req.body ?? {});
   if (error) return res.status(400).json({ error });
-  res.json({ settings: publicSettings() });
+  res.json({ settings: publicSettings(await getSettings()) });
 });
 
 router.get('/admin/qr', async (req, res) => {
-  const s = getSettings();
+  const s = await getSettings();
   const { payload, expires_in } = makePayload(s);
   const svg = await QRCode.toString(payload, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#3b2a3f', light: '#ffffff' } });
   res.set('Cache-Control', 'no-store').json({ svg, payload, expires_in, mode: s.qr_mode, rotate_sec: s.qr_rotate_sec, company_name: s.company_name });
 });
 
 // Invalidates every printed/old QR code.
-router.post('/admin/qr/regenerate', (req, res) => {
-  setSetting('qr_secret', crypto.randomBytes(32).toString('hex'));
+router.post('/admin/qr/regenerate', async (req, res) => {
+  await setSetting('qr_secret', crypto.randomBytes(32).toString('hex'));
   res.json({ ok: true });
 });
 
 /* ---------- dashboard / attendance ---------- */
 
-router.get('/admin/dashboard', (req, res) => {
+router.get('/admin/dashboard', async (req, res) => {
   const date = localParts().date;
-  const { rows } = buildReport({ from: date, to: date });
+  const [{ rows }, pending] = await Promise.all([
+    buildReport({ from: date, to: date }),
+    db.get("SELECT COUNT(*) AS n FROM leaves WHERE status = 'pending'"),
+  ]);
   const count = (st) => rows.filter((r) => r.status === st).length;
-  const pendingLeaves = db.prepare("SELECT COUNT(*) n FROM leaves WHERE status = 'pending'").get().n;
   res.json({
-    date, pending_leaves: pendingLeaves, rows,
+    date, pending_leaves: pending.n, rows,
     counts: { total: rows.length, present: count('present'), late: count('late'), leave: count('leave'), waiting: count('pending') },
   });
 });
@@ -128,18 +130,18 @@ function parseRange(q) {
   return { from, to, userId };
 }
 
-router.get('/admin/attendance', (req, res) => {
+router.get('/admin/attendance', async (req, res) => {
   const r = parseRange(req.query);
   if (r.error) return res.status(400).json({ error: r.error });
-  const { rows, summary } = buildReport(r);
+  const { rows, summary } = await buildReport(r);
   res.json({ rows: rows.reverse(), summary });
 });
 
-// Manual fix when someone forgot to scan: upsert one day for one employee. Empty times clear the value.
-router.put('/admin/attendance', (req, res) => {
+// Manual fix when someone forgot to scan: upsert one day for one employee. An empty check-in deletes the day.
+router.put('/admin/attendance', async (req, res) => {
   const { user_id, work_date, check_in, check_out } = req.body ?? {};
   const note = String(req.body?.note ?? '').trim().slice(0, 200);
-  if (!db.prepare('SELECT 1 FROM users WHERE id = ?').get(user_id)) return res.status(404).json({ error: 'ไม่พบพนักงาน' });
+  if (!(await db.get('SELECT 1 AS x FROM users WHERE id = ?', [user_id]))) return res.status(404).json({ error: 'ไม่พบพนักงาน' });
   if (!isDate(work_date)) return res.status(400).json({ error: 'วันที่ไม่ถูกต้อง' });
   for (const t of [check_in, check_out]) if (t && !isTime(t)) return res.status(400).json({ error: 'เวลาไม่ถูกต้อง' });
   if (!check_in && check_out) return res.status(400).json({ error: 'ต้องมีเวลาเข้างานก่อนจึงจะใส่เวลาออกงานได้' });
@@ -148,14 +150,14 @@ router.put('/admin/attendance', (req, res) => {
   const inIso = check_in ? localToIso(work_date, check_in) : null;
   const outIso = check_out ? localToIso(work_date, check_out) : null;
   if (!inIso) {
-    db.prepare('DELETE FROM attendance WHERE user_id = ? AND work_date = ?').run(user_id, work_date);
+    await db.run('DELETE FROM attendance WHERE user_id = ? AND work_date = ?', [user_id, work_date]);
     return res.json({ ok: true, deleted: true });
   }
-  db.prepare(`INSERT INTO attendance (user_id, work_date, check_in, check_out, late_minutes, note, edited_by)
-              VALUES (?, ?, ?, ?, ?, ?, ?)
-              ON CONFLICT(user_id, work_date) DO UPDATE SET check_in = excluded.check_in, check_out = excluded.check_out,
-                late_minutes = excluded.late_minutes, note = excluded.note, edited_by = excluded.edited_by`)
-    .run(user_id, work_date, inIso, outIso, inIso ? lateMinutes(inIso) : 0, note, req.user.id);
+  await db.run(`INSERT INTO attendance (user_id, work_date, check_in, check_out, late_minutes, note, edited_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, work_date) DO UPDATE SET check_in = excluded.check_in, check_out = excluded.check_out,
+                  late_minutes = excluded.late_minutes, note = excluded.note, edited_by = excluded.edited_by`,
+  [user_id, work_date, inIso, outIso, lateMinutes(inIso, await getSettings()), note, req.user.id]);
   res.json({ ok: true });
 });
 
@@ -167,20 +169,20 @@ router.get('/admin/export.xlsx', async (req, res) => {
 
 /* ---------- leave approval ---------- */
 
-router.get('/admin/leaves', (req, res) => {
+router.get('/admin/leaves', async (req, res) => {
   const status = ['pending', 'approved', 'rejected', 'cancelled'].includes(req.query.status) ? req.query.status : null;
-  const rows = db.prepare(`
+  const rows = await db.all(`
     SELECT l.*, u.full_name, u.nickname, u.emp_code FROM leaves l JOIN users u ON u.id = l.user_id
-    ${status ? 'WHERE l.status = ?' : ''} ORDER BY (l.status = 'pending') DESC, l.start_date DESC, l.id DESC LIMIT 300`).all(...(status ? [status] : []));
+    ${status ? 'WHERE l.status = ?' : ''} ORDER BY (l.status = 'pending') DESC, l.start_date DESC, l.id DESC LIMIT 300`, status ? [status] : []);
   res.json({ leaves: rows });
 });
 
-router.put('/admin/leaves/:id', (req, res) => {
+router.put('/admin/leaves/:id', async (req, res) => {
   const status = req.body?.status;
   if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'สถานะไม่ถูกต้อง' });
   const note = String(req.body?.note ?? '').trim().slice(0, 300);
-  const info = db.prepare(`UPDATE leaves SET status = ?, admin_note = ?, decided_by = ?, decided_at = ? WHERE id = ? AND status != 'cancelled'`)
-    .run(status, note, req.user.id, new Date().toISOString(), req.params.id);
+  const info = await db.run(`UPDATE leaves SET status = ?, admin_note = ?, decided_by = ?, decided_at = ? WHERE id = ? AND status != 'cancelled'`,
+    [status, note, req.user.id, new Date().toISOString(), req.params.id]);
   if (!info.changes) return res.status(404).json({ error: 'ไม่พบใบลา หรือถูกยกเลิกแล้ว' });
   res.json({ ok: true });
 });

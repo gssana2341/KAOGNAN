@@ -41,19 +41,43 @@ npm start          # เปิด http://localhost:3000
 
 ## ดีพลอยขึ้นเว็บจริง
 
-ระบบนี้ต้องมี **เซิร์ฟเวอร์ Node ที่รันตลอดเวลา + ดิสก์ที่เก็บไฟล์ได้ถาวร** (ฐานข้อมูลคือไฟล์ SQLite)
-จึง **ใช้กับ Vercel / Netlify / Cloudflare Pages / GitHub Pages ไม่ได้** — โฮสต์เหล่านั้นเสิร์ฟได้แค่ไฟล์หน้าเว็บ หน้าล็อกอินจะขึ้นแต่กดล็อกอินแล้วได้ `404`
-(เพราะ `/api/...` ไม่มีเซิร์ฟเวอร์รอรับ) ให้ใช้โฮสต์แบบรัน Node/Docker แทน:
+ระบบมี 2 โหมดฐานข้อมูล ใช้โค้ดชุดเดียวกัน: ถ้าตั้ง `TURSO_DATABASE_URL` จะใช้ฐานข้อมูลออนไลน์ [Turso](https://turso.tech) (SQLite บนคลาวด์) ถ้าไม่ตั้ง จะใช้ไฟล์ SQLite ในเครื่อง
+
+### ทางที่ 1: Vercel + Turso (ไม่ต้องดูแลเซิร์ฟเวอร์เอง)
+
+Vercel ไม่มีดิสก์ถาวร จึงเก็บข้อมูลในไฟล์ไม่ได้ — ต้องใช้ Turso คู่กัน
+
+1. **สร้างฐานข้อมูล Turso:** สมัคร turso.tech → Create Database (ตั้งชื่อ `kaongan`, เลือก location ใกล้ไทย เช่น สิงคโปร์)
+   แล้วคัดลอก **Database URL** (หน้าตา `libsql://kaongan-xxxx.turso.io`) และสร้าง **Auth Token** (Create Token) เก็บไว้
+2. **Vercel → โปรเจกต์ → Settings → Environment Variables** เพิ่ม 3 ตัว (ติ๊ก Production):
+
+   | ชื่อ | ค่า |
+   |---|---|
+   | `TURSO_DATABASE_URL` | URL จากข้อ 1 |
+   | `TURSO_AUTH_TOKEN` | Token จากข้อ 1 |
+   | `ADMIN_PASSWORD` | รหัสผ่านแอดมินที่คุณตั้งเอง (อย่างน้อย 6 ตัว) |
+
+3. **Deployments → ⋯ → Redeploy** (ต้อง redeploy ให้ตัวแปรมีผล)
+4. เปิด `https://<โดเมนของคุณ>/api/health/db` ต้องเห็น `{"ok":true,"database":"turso"}`
+   (ถ้าไม่ใช่ จะมีข้อความบอกว่าขาดอะไร) แล้วล็อกอินด้วย `admin` + `ADMIN_PASSWORD`
+
+หมายเหตุ: `vercel.json` ตั้งให้ฟังก์ชันรันที่สิงคโปร์ (`sin1`) — ถ้า Vercel ไม่อนุญาตแพ็กเกจของคุณ ให้ลบบรรทัด `regions` ·
+แพ็กเกจ Hobby ของ Vercel ตามเงื่อนไขการใช้งานเป็นแบบ **ไม่ใช้เชิงพาณิชย์** ถ้าใช้ในบริษัทจริงให้ตรวจเงื่อนไข/แพ็กเกจล่าสุดของ Vercel และ Turso
+
+### ทางที่ 2: เซิร์ฟเวอร์ที่รัน Node ตลอด (Render / Railway / Fly.io / VPS)
+
+ใช้ไฟล์ SQLite ในดิสก์ถาวร ไม่ต้องมี Turso
 
 | โฮสต์ | วิธี |
 |---|---|
-| **Render** | New + → **Blueprint** → เลือกรีโปนี้ (ใช้ `render.yaml`) แล้วตั้ง `ADMIN_PASSWORD` ในหน้า Dashboard — ดิสก์ถาวรต้องใช้แพ็กเกจเสียเงิน ถ้าใช้ฟรี ข้อมูลจะหายทุกครั้งที่รีสตาร์ต/ดีพลอย |
+| **Render** | New + → **Blueprint** → เลือกรีโปนี้ (ใช้ `render.yaml`) แล้วตั้ง `ADMIN_PASSWORD` — ดิสก์ถาวรต้องใช้แพ็กเกจเสียเงิน ถ้าใช้ฟรี ข้อมูลจะหายทุกครั้งที่รีสตาร์ต/ดีพลอย |
 | **Railway / Fly.io** | ดีพลอยจาก `Dockerfile` ผูก Volume ไปที่ `/data` แล้วตั้ง env ด้านล่าง |
-| **VPS** | `git clone` → `npm ci --omit=dev --ignore-scripts` → `NODE_ENV=production npm start` หลัง Nginx/Caddy ที่เปิด HTTPS (ส่ง `/` ทั้งหมดไปที่พอร์ต Node ไม่ใช่เฉพาะ `/api`) |
+| **VPS** | `git clone` → `npm ci --omit=dev` → `NODE_ENV=production npm start` หลัง Nginx/Caddy ที่เปิด HTTPS (ส่ง `/` ทั้งหมดไปที่พอร์ต Node ไม่ใช่เฉพาะ `/api`) |
 
-ตั้ง environment variables บนโฮสต์: `NODE_ENV=production`, `ADMIN_PASSWORD=<รหัสแอดมินของคุณ>`, `TRUST_PROXY=1`, `DATA_DIR=<โฟลเดอร์ของดิสก์ถาวร>`
-— ถ้าไม่ตั้ง `ADMIN_PASSWORD` ในโหมด production ระบบจะ **สุ่มรหัสแอดมินแล้วพิมพ์ใน log ครั้งเดียว** (ไม่ใช้ `admin1234` เพื่อกันคนแปลกหน้าล็อกอินตัดหน้า)
-ตรวจว่าขึ้นแล้ว: เปิด `https://<โดเมนของคุณ>/healthz` ต้องเห็นคำว่า `ok`
+env บนโฮสต์แบบนี้: `NODE_ENV=production`, `ADMIN_PASSWORD=<รหัสแอดมินของคุณ>`, `TRUST_PROXY=1`, `DATA_DIR=<โฟลเดอร์ของดิสก์ถาวร>`
+ตรวจว่าขึ้นแล้ว: เปิด `/healthz` ต้องเห็น `ok`
+
+> ถ้าไม่ตั้ง `ADMIN_PASSWORD` ในโหมด production ระบบจะ **สุ่มรหัสแอดมินแล้วพิมพ์ใน log ครั้งเดียว** (ไม่ใช้ `admin1234` เพื่อกันคนแปลกหน้าล็อกอินตัดหน้า)
 
 ## Excel
 
@@ -73,7 +97,8 @@ npm start          # เปิด http://localhost:3000
 | `PORT` | `3000` | พอร์ต |
 | `NODE_ENV` | – | ตั้งเป็น `production` บนเซิร์ฟเวอร์จริง (ไม่ใช้รหัสแอดมินเริ่มต้นที่เดาง่าย) |
 | `ADMIN_PASSWORD` | – | รหัสแอดมินตอนสร้างระบบครั้งแรก (ไม่ตั้ง: เครื่องตัวเอง = `admin1234`, production = สุ่มแล้วพิมพ์ใน log) |
-| `DATA_DIR` | `./data` | ที่เก็บฐานข้อมูล SQLite (`kaongan.db`) และรูปพื้นหลังที่อัปโหลด — **สำรองโฟลเดอร์นี้** |
+| `DATA_DIR` | `./data` | ที่เก็บไฟล์ฐานข้อมูล SQLite (`kaongan.db`) เมื่อไม่ได้ใช้ Turso — **สำรองโฟลเดอร์นี้** |
+| `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | – | ใช้ฐานข้อมูลออนไลน์ Turso แทนไฟล์ (จำเป็นบน Vercel) |
 | `TRUST_PROXY` | – | ตั้งเป็น `1` เมื่ออยู่หลัง reverse proxy |
 | `CORS_ORIGINS` | – | origin ของแอปมือถือ (คั่นด้วย `,`) ที่อนุญาตให้เรียก API |
 | `TZ_OFFSET_MIN` | `420` | เขตเวลา (นาทีจาก UTC) — ค่าเริ่มต้นคือประเทศไทย |
@@ -82,7 +107,8 @@ npm start          # เปิด http://localhost:3000
 ## โครงสร้าง
 
 ```
-server/    Express + SQLite (better-sqlite3), API ทั้งหมดอยู่ใต้ /api (Bearer token)
+server/    Express + SQLite/Turso (libSQL), API ทั้งหมดอยู่ใต้ /api (Bearer token) — app.js = ตัวแอป, index.js = รันเป็นเซิร์ฟเวอร์
+api/       จุดเข้าของ Vercel (รัน server/app.js เป็น serverless function)
 public/    หน้าเว็บ (ไม่ต้อง build): js/views/* แต่ละหน้า, bg/* พื้นหลัง SVG, manifest + service worker
 scripts/   seed-demo, make-cert, make-icons (ไอคอนแอป), build-icons (ไอคอน UI), copy-vendor
 docs/      image-prompts.md — prompt ทำมาสคอต/ไอคอน/พื้นหลัง

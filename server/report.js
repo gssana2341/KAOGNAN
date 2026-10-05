@@ -9,19 +9,21 @@ function hhmm(iso) {
   return iso ? localParts(new Date(iso)).time : null;
 }
 
-function buildReport({ from, to, userId = null }) {
-  const s = getSettings();
+async function buildReport({ from, to, userId = null, settings = null }) {
+  const s = settings ?? await getSettings();
   const workdays = new Set(s.workdays);
   const today = localParts().date;
 
-  const users = db.prepare(`SELECT * FROM users WHERE track = 1 ${userId ? 'AND id = ?' : ''} ORDER BY emp_code, full_name`)
-    .all(...(userId ? [userId] : []));
+  const [users, allRecords, leaves] = await Promise.all([
+    db.all(`SELECT * FROM users WHERE track = 1 ${userId ? 'AND id = ?' : ''} ORDER BY emp_code, full_name`, userId ? [userId] : []),
+    db.all('SELECT * FROM attendance WHERE work_date BETWEEN ? AND ?', [from, to]),
+    db.all(`SELECT * FROM leaves WHERE status = 'approved' AND start_date <= ? AND end_date >= ?`, [to, from]),
+  ]);
   const ids = new Set(users.map((u) => u.id));
 
-  const records = db.prepare(`SELECT * FROM attendance WHERE work_date BETWEEN ? AND ?`).all(from, to).filter((r) => ids.has(r.user_id));
+  const records = allRecords.filter((r) => ids.has(r.user_id));
   const recKey = new Map(records.map((r) => [`${r.user_id}|${r.work_date}`, r]));
 
-  const leaves = db.prepare(`SELECT * FROM leaves WHERE status = 'approved' AND start_date <= ? AND end_date >= ?`).all(to, from);
   const leavesBy = new Map();
   for (const l of leaves) {
     if (!leavesBy.has(l.user_id)) leavesBy.set(l.user_id, []);
@@ -84,7 +86,7 @@ function buildReport({ from, to, userId = null }) {
   return { rows, summary: [...summary.values()], settings: s };
 }
 
-function lateMinutes(checkInIso, s = getSettings()) {
+function lateMinutes(checkInIso, s) {
   const mins = localParts(new Date(checkInIso)).minutes;
   const limit = toMin(s.work_start) + s.late_grace_min;
   return mins > limit ? mins - toMin(s.work_start) : 0;

@@ -27,7 +27,7 @@ function addSheet(wb, name, columns, rows) {
 }
 
 async function sendExcel(res, { from, to, userId }) {
-  const { rows, summary, settings } = buildReport({ from, to, userId });
+  const { rows, summary, settings } = await buildReport({ from, to, userId });
   const wb = new ExcelJS.Workbook();
   wb.creator = settings.company_name;
   wb.created = new Date();
@@ -77,10 +77,10 @@ async function sendExcel(res, { from, to, userId }) {
     if (color) row.getCell('status').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
   });
 
-  const leaves = db.prepare(`
+  const leaves = await db.all(`
     SELECT l.*, u.full_name, u.emp_code FROM leaves l JOIN users u ON u.id = l.user_id
     WHERE l.start_date <= ? AND l.end_date >= ? ${userId ? 'AND l.user_id = ?' : ''}
-    ORDER BY l.start_date, u.emp_code`).all(to, from, ...(userId ? [userId] : []));
+    ORDER BY l.start_date, u.emp_code`, [to, from, ...(userId ? [userId] : [])]);
   const leaveWs = addSheet(wb, 'ใบลา', [
     { header: 'รหัส', key: 'emp_code', width: 10 },
     { header: 'ชื่อ-นามสกุล', key: 'full_name', width: 28 },

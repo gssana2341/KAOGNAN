@@ -229,3 +229,31 @@ test('my attendance accepts a custom range (home screen week strip)', async () =
   assert.equal((await call('GET', `/attendance?from=${addDays(to, -100)}&to=${to}`, { token: ctx.somchai })).status, 400, 'max 62 days');
   assert.equal((await call('GET', `/attendance?from=${to}&to=${addDays(to, -1)}`, { token: ctx.somchai })).status, 400);
 });
+
+test('custom background photo is stored in the database and served back byte-for-byte', async () => {
+  const bytes = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from('kaongan-test-image')]);
+  const up = await call('POST', '/me/bg-image', { token: ctx.malee, body: { image: 'data:image/jpeg;base64,' + bytes.toString('base64') } });
+  assert.equal(up.status, 200);
+  const res = await call('GET', '/me/bg-image', { token: ctx.malee, raw: true });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /image\/jpeg/);
+  assert.deepEqual(Buffer.from(await res.arrayBuffer()), bytes);
+  assert.equal((await call('GET', '/me', { token: ctx.malee })).has_custom_bg, true);
+});
+
+test('failed logins are rate limited (shared through the database)', async () => {
+  for (let i = 0; i < 8; i++) {
+    assert.equal((await call('POST', '/auth/login', { body: { username: 'nobody-here', password: 'x' + i } })).status, 401);
+  }
+  const blocked = await call('POST', '/auth/login', { body: { username: 'nobody-here', password: 'again' } });
+  assert.equal(blocked.status, 429);
+  // other accounts are not affected by that username's counter
+  assert.equal((await call('POST', '/auth/login', { body: { username: 'somchai', password: 'mypass123' } })).status, 200);
+});
+
+test('health endpoints', async () => {
+  const root = BASE.replace(/\/api$/, '');
+  assert.equal(await (await fetch(root + '/healthz')).text(), 'ok');
+  const h = await (await fetch(BASE + '/health/db')).json();
+  assert.deepEqual(h, { ok: true, database: 'file' });
+});

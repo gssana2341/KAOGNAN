@@ -5,7 +5,7 @@ services:
     name: kaongan
     runtime: node
     plan: starter
-    buildCommand: npm ci --omit=dev --ignore-scripts
+    buildCommand: npm ci --omit=dev
     startCommand: npm start
     healthCheckPath: /healthz
     envVars:
