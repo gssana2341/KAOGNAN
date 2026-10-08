@@ -1,12 +1,21 @@
 // Builds the per-day attendance rows (present / late / leave / absent) used by the UI and the Excel export.
 const { db } = require('./db');
 const { getSettings } = require('./settings');
-const { localParts, dow, eachDate, toMin } = require('./time');
+const { localParts, localToIso, dow, eachDate, toMin } = require('./time');
 
 const MAX_RANGE_DAYS = 366;
 
 function hhmm(iso) {
   return iso ? localParts(new Date(iso)).time : null;
+}
+
+// Overtime = time worked after the end of the shift (work_end of the record's own day), in whole minutes.
+// Coming in early doesn't count, and someone who arrives after work_end gets OT from their check-in. Computed from the
+// current settings, so it needs no stored column and also covers records that existed before OT was added.
+function otMinutes(rec, s) {
+  if (!rec?.check_in || !rec.check_out) return 0;
+  const from = Math.max(Date.parse(localToIso(rec.work_date, s.work_end)), Date.parse(rec.check_in));
+  return Math.max(0, Math.floor((Date.parse(rec.check_out) - from) / 60000));
 }
 
 async function buildReport({ from, to, userId = null, settings = null }) {
@@ -39,7 +48,7 @@ async function buildReport({ from, to, userId = null, settings = null }) {
     if (!u.active && !hasData.has(u.id)) continue;
     const sum = {
       user_id: u.id, emp_code: u.emp_code, full_name: u.full_name, nickname: u.nickname, position: u.position, active: !!u.active,
-      expected_days: 0, present: 0, late_count: 0, late_minutes: 0, leave_days: 0, absent: 0, hours: 0,
+      expected_days: 0, present: 0, late_count: 0, late_minutes: 0, leave_days: 0, absent: 0, hours: 0, ot_minutes: 0,
     };
     summary.set(u.id, sum);
     const createdDate = localParts(new Date(u.created_at)).date;
@@ -53,7 +62,7 @@ async function buildReport({ from, to, userId = null, settings = null }) {
 
       const row = {
         date, user_id: u.id, emp_code: u.emp_code, full_name: u.full_name, nickname: u.nickname,
-        record_id: rec?.id ?? null, check_in: null, check_out: null, hours: null, late_minutes: 0,
+        record_id: rec?.id ?? null, check_in: null, check_out: null, hours: null, late_minutes: 0, ot_minutes: 0,
         status: null, leave_type: leave?.type ?? null, leave_part: leave?.part ?? null, note: rec?.note ?? '',
       };
 
@@ -67,6 +76,8 @@ async function buildReport({ from, to, userId = null, settings = null }) {
         if (rec.check_in && rec.check_out) {
           row.hours = Math.round(((new Date(rec.check_out) - new Date(rec.check_in)) / 3600000) * 100) / 100;
           sum.hours += row.hours;
+          row.ot_minutes = otMinutes(rec, s);
+          sum.ot_minutes += row.ot_minutes;
         }
         row.status = rec.late_minutes > 0 ? 'late' : 'present';
         sum.present++;
@@ -92,4 +103,4 @@ function lateMinutes(checkInIso, s) {
   return mins > limit ? mins - toMin(s.work_start) : 0;
 }
 
-module.exports = { buildReport, lateMinutes, hhmm, MAX_RANGE_DAYS };
+module.exports = { buildReport, lateMinutes, otMinutes, hhmm, MAX_RANGE_DAYS };

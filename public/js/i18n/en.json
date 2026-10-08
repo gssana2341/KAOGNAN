@@ -334,5 +334,9 @@
   "เล็งกล้องมาที่ QR นี้": "Point the camera at this QR",
   "รอจนขึ้นว่าสำเร็จ": "and wait for the success message",
   "เปิดแอปได้ที่ {host} · KaoNgan ระบบเช็คอินเข้างาน": "Open the app at {host} · KaoNgan work check-in",
-  "QR เปลี่ยนอัตโนมัติทุก {n} วินาที — ห้ามถ่ายรูปส่งต่อนะ": "The QR changes automatically every {n} seconds — please don't photograph and share it"
+  "QR เปลี่ยนอัตโนมัติทุก {n} วินาที — ห้ามถ่ายรูปส่งต่อนะ": "The QR changes automatically every {n} seconds — please don't photograph and share it",
+  "โอที": "OT",
+  "โอที {h} ชม.": "OT {h} h",
+  "ชม.โอทีรวม": "Total OT hours",
+  "โอที = เวลาที่ทำงานเลยเวลาเลิกงานไปแล้ว ระบบนับให้เองจากเวลาสแกนออก (มาเช้ากว่าเวลาเริ่มงานไม่นับเป็นโอที)": "OT = time worked after the end of the shift, counted automatically from the check-out time (arriving before the start time does not count as OT)"
 }

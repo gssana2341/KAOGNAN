@@ -192,18 +192,67 @@ test('report, manual correction and Excel export', async () => {
   assert.equal((await call('GET', `/admin/attendance?from=${from}&to=${to}&user_id=${malee.id}`, { token: ctx.admin })).rows[0].status, 'present', 'inside the 10 minute grace');
 });
 
-test('Excel export contains the three sheets with data', async () => {
+test('overtime: only time after work_end counts, no approval or minimum', async () => {
+  const day = today();
+  await call('PUT', '/admin/settings', { token: ctx.admin, body: { work_start: '09:00', work_end: '18:00', late_grace_min: 10 } });
+  const malee = (await call('GET', '/admin/users', { token: ctx.admin })).users.find((u) => u.username === 'malee');
+  const set = (check_in, check_out) => call('PUT', '/admin/attendance', { token: ctx.admin, body: { user_id: malee.id, work_date: day, check_in, check_out } });
+  const ot = async () => (await call('GET', `/admin/attendance?from=${day}&to=${day}&user_id=${malee.id}`, { token: ctx.admin })).rows[0].ot_minutes;
+
+  assert.equal((await set('08:00', '19:30')).status, 200);
+  assert.equal(await ot(), 90, 'came at 8 and left at 19:30: the hour before the shift is not OT, the 90 minutes after it are');
+  await set('08:00', '17:59');
+  assert.equal(await ot(), 0, 'leaving before the end of the shift is no OT');
+  await set('09:00', '18:01');
+  assert.equal(await ot(), 1, 'no minimum');
+  await set('08:00', null);
+  assert.equal(await ot(), 0, 'no check-out yet, nothing to count');
+  await set('18:30', '20:00');
+  assert.equal(await ot(), 90, 'arriving after the end of the shift counts from the check-in');
+
+  const rep = await call('GET', `/admin/attendance?from=${day}&to=${day}`, { token: ctx.admin });
+  assert.equal(rep.summary.find((s) => s.user_id === malee.id).ot_minutes, 90);
+  const mine = await call('GET', '/today', { token: ctx.malee });
+  assert.equal(mine.record.ot_minutes, 90, 'the employee sees their own OT on the home screen');
+
+  // Excel: OT in the summary and daily sheets, plus one sheet per person with a total row
+  const res = await call('GET', `/admin/export.xlsx?from=${day}&to=${day}`, { token: ctx.admin, raw: true });
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(Buffer.from(await res.arrayBuffer()));
+  const sum = wb.getWorksheet('สรุปรายคน');
+  assert.equal(sum.getRow(1).getCell(12).value, 'OT รวม (ชม.)');
+  const sumRow = sum.getColumn(2).values.indexOf('มาลี สวยงาม');
+  assert.equal(sum.getRow(sumRow).getCell(12).value, 1.5);
+  const personal = wb.worksheets.find((w) => w.name.startsWith('E002'));
+  assert.ok(personal, 'a sheet named after each person');
+  const total = personal.getRow(personal.rowCount);
+  assert.equal(total.getCell(1).value, 'รวม');
+  assert.equal(total.getCell(4).value, 1.5, 'hours worked');
+  assert.equal(total.getCell(5).value, 1.5, 'OT hours');
+  assert.equal(personal.getRow(2).getCell(5).value, 1.5, 'the day row shows the same OT');
+});
+
+test('Excel export contains the three sheets with data, then one sheet per person', async () => {
   const from = addDays(today(), -2), to = addDays(today(), 12);
   const res = await call('GET', `/admin/export.xlsx?from=${from}&to=${to}`, { token: ctx.admin, raw: true });
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type'), /spreadsheetml/);
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(Buffer.from(await res.arrayBuffer()));
-  assert.deepEqual(wb.worksheets.map((w) => w.name), ['สรุปรายคน', 'รายวัน', 'ใบลา']);
+  const sheets = wb.worksheets.map((w) => w.name);
+  assert.deepEqual(sheets.slice(0, 3), ['สรุปรายคน', 'รายวัน', 'ใบลา']);
+  assert.ok(sheets.slice(3).some((n) => n.startsWith('E001')) && sheets.slice(3).some((n) => n.startsWith('E002')), `per-person sheets: ${sheets}`);
+  assert.equal(new Set(sheets.map((n) => n.toLowerCase())).size, sheets.length, 'sheet names are unique');
   const names = wb.getWorksheet('สรุปรายคน').getColumn(2).values.filter(Boolean);
   assert.ok(names.includes('สมชาย ใจดี') && names.includes('มาลี สวยงาม'));
   assert.ok(wb.getWorksheet('ใบลา').rowCount >= 2);
   assert.equal((await call('GET', `/admin/export.xlsx?from=2020-01-01&to=2023-01-01`, { token: ctx.admin })).status, 400, 'range capped at 1 year');
+
+  const users = (await call('GET', '/admin/users', { token: ctx.admin })).users;
+  const one = await call('GET', `/admin/export.xlsx?from=${from}&to=${to}&user_id=${users.find((u) => u.username === 'malee').id}`, { token: ctx.admin, raw: true });
+  const wb1 = new ExcelJS.Workbook();
+  await wb1.xlsx.load(Buffer.from(await one.arrayBuffer()));
+  assert.deepEqual(wb1.worksheets.map((w) => w.name), ['สรุปรายคน', 'รายวัน', 'ใบลา'], 'exporting one person needs no extra sheet');
 });
 
 test('background selection and custom upload', async () => {
@@ -366,9 +415,12 @@ test('Excel export can be requested in English', async () => {
   assert.equal(res.status, 200);
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(Buffer.from(await res.arrayBuffer()));
-  assert.deepEqual(wb.worksheets.map((w) => w.name), ['Summary', 'Daily', 'Leaves']);
+  assert.deepEqual(wb.worksheets.map((w) => w.name).slice(0, 3), ['Summary', 'Daily', 'Leaves']);
   assert.equal(wb.getWorksheet('Daily').getRow(1).getCell(4).value, 'Check in');
-  const statuses = wb.getWorksheet('Daily').getColumn(8).values.filter((v) => typeof v === 'string');
+  assert.equal(wb.getWorksheet('Daily').getRow(1).getCell(7).value, 'OT (h)');
+  const statuses = wb.getWorksheet('Daily').getColumn(9).values.filter((v) => typeof v === 'string');
   assert.ok(statuses.some((s) => /Present|Late|Leave|Absent/.test(s)), 'statuses are in English');
   assert.ok(statuses.every((s) => !/[฀-๿]/.test(s)), 'no Thai in the English workbook');
+  const personal = wb.worksheets.find((w) => w.name.startsWith('E002'));
+  assert.equal(personal.getRow(personal.rowCount).getCell(1).value, 'Total');
 });

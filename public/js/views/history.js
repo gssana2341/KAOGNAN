@@ -42,6 +42,7 @@ export default function history(el) {
         <div class="stat">${iconChip('tree-palm', 'sky', 17)}<b>${fmtDays(s.leave_days)}</b><span>${t('วันลา')}</span></div>
         <div class="stat">${iconChip('circle-x', 'red', 17)}<b>${s.absent}</b><span>${t('วันขาด')}</span></div>
         <div class="stat">${iconChip('timer', 'lav', 17)}<b>${fmtHours(s.hours)}</b><span>${t('ชม.ทำงานรวม')}</span></div>
+        <div class="stat">${iconChip('moon', 'lemon', 17)}<b>${fmtHours(s.ot_minutes / 60)}</b><span>${t('ชม.โอทีรวม')}</span></div>
       </div></section>` : ''}
       <section class="card">${calendar(d)}</section>
       <section class="list">
@@ -50,7 +51,7 @@ export default function history(el) {
             <div class="date"><b>${dayNum(r.date)}</b><small>${fmtDay(r.date)}</small></div>
             <div class="grow">
               <div class="times-line">${r.check_in ? `${r.check_in} – ${r.check_out ?? `<span class="muted">${t('ยังไม่ออก')}</span>`}` : `<span class="muted">${t('ไม่มีเวลาสแกน')}</span>`}</div>
-              ${r.hours != null ? `<div class="small muted">${t('ทำงาน {h} ชม.', { h: fmtHours(r.hours) })}</div>` : r.check_in && !r.check_out && r.date < todayStr() ? `<div class="small muted">${t('ลืมสแกนออกหรือเปล่านะ? แจ้งแอดมินได้เลย')}</div>` : ''}
+              ${r.hours != null ? `<div class="small muted">${t('ทำงาน {h} ชม.', { h: fmtHours(r.hours) })}${r.ot_minutes > 0 ? ` · ${t('โอที {h} ชม.', { h: fmtHours(r.ot_minutes / 60) })}` : ''}</div>` : r.check_in && !r.check_out && r.date < todayStr() ? `<div class="small muted">${t('ลืมสแกนออกหรือเปล่านะ? แจ้งแอดมินได้เลย')}</div>` : ''}
               ${r.note ? `<div class="small muted">${icon('message-circle', 13)} ${esc(r.note)}</div>` : ''}
             </div>
             ${statusBadge(r)}

@@ -256,6 +256,10 @@ input[type='date'], input[type='time'] { padding-left: 11px; padding-right: 8px;
 .time-tile .icon-chip { width: 30px; height: 30px; border-radius: 10px; }
 .time-tile small { color: var(--muted); font-weight: 700; font-size: .78rem; }
 .time-tile b { font-size: 1.3rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.times.has-ot { grid-template-columns: repeat(4, 1fr); gap: 6px; } /* a 4th tile (OT) once the shift is over */
+.times.has-ot .time-tile { padding-inline: 2px; }
+.times.has-ot .time-tile b { font-size: 1.1rem; }
+.times.has-ot .time-tile small { font-size: .72rem; }
 .banner { border-radius: 20px; padding: 11px 14px; font-weight: 700; font-size: .92rem; display: flex; gap: 10px; align-items: center; box-shadow: var(--shadow); }
 .banner.info { background: var(--sky-l); color: #1b5d99; }
 .banner.warn { background: var(--lemon-l); color: #7a5600; }

@@ -21,6 +21,7 @@ export default function settings(el) {
             <label class="field">${t('เลิกงาน')}<input type="time" name="work_end" value="${s.work_end}" required></label>
           </div>
           <label class="field">${t('ผ่อนผันมาสายได้ (นาที)')}<input type="number" name="late_grace_min" min="0" max="180" value="${s.late_grace_min}" required></label>
+          <p class="small muted" style="margin-top:-4px">${t('โอที = เวลาที่ทำงานเลยเวลาเลิกงานไปแล้ว ระบบนับให้เองจากเวลาสแกนออก (มาเช้ากว่าเวลาเริ่มงานไม่นับเป็นโอที)')}</p>
           <div><b style="font-size:.9rem">${t('วันทำงาน')}</b>
             <div class="seg" style="margin-top:7px">${WEEK_ORDER.map((n) => `<input type="checkbox" name="wd" id="wd${n}" value="${n}" ${s.workdays.includes(n) ? 'checked' : ''}><label for="wd${n}">${dowShort(n)}</label>`).join('')}</div>
           </div>

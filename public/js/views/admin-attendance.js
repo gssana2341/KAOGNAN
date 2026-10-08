@@ -47,20 +47,20 @@ export default function attendance(el) {
       <section class="card">
         ${cardTitle('users', 'lav', t('สรุปรายคน'), `<span class="small muted">${fmtDateShort(f.from)} – ${fmtDateShort(f.to)}</span>`)}
         <div class="scroll-x"><table class="table">
-          <thead><tr><th>${t('พนักงาน')}</th><th class="num">${t('วันทำงาน')}</th><th class="num">${t('มา')}</th><th class="num">${t('สาย (ครั้ง)')}</th><th class="num">${t('ลา')}</th><th class="num">${t('ขาด')}</th><th class="num">${t('ชม.รวม')}</th></tr></thead>
+          <thead><tr><th>${t('พนักงาน')}</th><th class="num">${t('วันทำงาน')}</th><th class="num">${t('มา')}</th><th class="num">${t('สาย (ครั้ง)')}</th><th class="num">${t('ลา')}</th><th class="num">${t('ขาด')}</th><th class="num">${t('ชม.รวม')}</th><th class="num">${t('โอที')}</th></tr></thead>
           <tbody>${summary.length ? summary.map((s) => `
             <tr><td><b>${esc(s.full_name)}</b>${s.emp_code ? ` <span class="muted small">${esc(s.emp_code)}</span>` : ''}</td>
               <td class="num">${s.expected_days}</td><td class="num">${s.present}</td><td class="num">${s.late_count}</td>
-              <td class="num">${fmtDays(s.leave_days)}</td><td class="num">${s.absent || '–'}</td><td class="num">${fmtHours(s.hours)}</td></tr>`).join('') : `<tr><td colspan="7" class="empty">${t('ไม่มีข้อมูล')}</td></tr>`}</tbody>
+              <td class="num">${fmtDays(s.leave_days)}</td><td class="num">${s.absent || '–'}</td><td class="num">${fmtHours(s.hours)}</td><td class="num">${s.ot_minutes ? fmtHours(s.ot_minutes / 60) : '–'}</td></tr>`).join('') : `<tr><td colspan="8" class="empty">${t('ไม่มีข้อมูล')}</td></tr>`}</tbody>
         </table></div>
       </section>
       <section class="card">
         ${cardTitle('list-checks', 'mint', t('รายวัน'), `<span class="small muted">${icon('pencil', 13)} ${t('กดที่แถวเพื่อแก้ไขเวลา (เช่น ลืมสแกน)')}</span>`)}
         ${rows.length ? `<div class="scroll-x" style="max-height:60vh"><table class="table">
-          <thead><tr><th>${t('วันที่')}</th><th>${t('พนักงาน')}</th><th>${t('เข้า')}</th><th>${t('ออก')}</th><th class="num">${t('ชม.')}</th><th>${t('สถานะ')}</th><th>${t('หมายเหตุ')}</th></tr></thead>
+          <thead><tr><th>${t('วันที่')}</th><th>${t('พนักงาน')}</th><th>${t('เข้า')}</th><th>${t('ออก')}</th><th class="num">${t('ชม.')}</th><th class="num">${t('โอที')}</th><th>${t('สถานะ')}</th><th>${t('หมายเหตุ')}</th></tr></thead>
           <tbody>${shown.map((r, i) => `
             <tr class="clickable" data-i="${i}"><td>${fmtDate(r.date)}</td><td>${esc(r.full_name)}</td><td>${r.check_in ?? '–'}</td><td>${r.check_out ?? '–'}</td>
-              <td class="num">${r.hours != null ? fmtHours(r.hours) : '–'}</td><td>${statusBadge(r)}</td><td class="small muted">${esc(r.note)}</td></tr>`).join('')}</tbody>
+              <td class="num">${r.hours != null ? fmtHours(r.hours) : '–'}</td><td class="num">${r.ot_minutes ? fmtHours(r.ot_minutes / 60) : '–'}</td><td>${statusBadge(r)}</td><td class="small muted">${esc(r.note)}</td></tr>`).join('')}</tbody>
         </table></div>
         ${rows.length > MAX_ROWS ? `<p class="small muted">${t('แสดง {shown} แถวแรกจาก {total} — ดาวน์โหลด Excel เพื่อดูทั้งหมด', { shown: MAX_ROWS, total: rows.length })}</p>` : ''}`
     : `<div class="empty">${mascot('sleepy', 90)}<p>${t('ไม่มีข้อมูลในช่วงนี้')}</p></div>`}

@@ -41,6 +41,14 @@ export default function home(el, { user }) {
     const end = r.check_out_at ? Date.parse(r.check_out_at) : now();
     return Math.max(0, (end - Date.parse(r.check_in_at)) / 3600000);
   };
+  // Overtime = time after the end of the shift. Counts up live until check-out, then the server's figure is used.
+  const otMinutes = () => {
+    const r = st.record;
+    if (!r?.check_in_at) return 0;
+    if (r.check_out_at) return r.ot_minutes ?? 0;
+    const shiftEnd = Date.parse(`${st.date}T${st.settings.work_end}:00+07:00`);
+    return Math.max(0, Math.floor((now() - Math.max(shiftEnd, Date.parse(r.check_in_at))) / 60000));
+  };
   const shiftHours = () => Math.max(1, toHours(st.settings.work_end) - toHours(st.settings.work_start));
   const workedNote = () => t('ทำงานแล้ว {a} จาก {b} ชม.', { a: fmtHours(worked()), b: fmtHours(shiftHours()) });
 
@@ -77,6 +85,7 @@ export default function home(el, { user }) {
       : action === 'out' ? { cls: 'out', text: t('สแกนออกงาน'), ic: icon('qr-code', 58) } : { cls: 'done', text: t('วันนี้เรียบร้อย'), ic: icon('party-popper', 54) };
     const ratio = action === 'done' ? 1 : Math.min(1, (worked() ?? 0) / shiftHours());
     const s = st.settings;
+    const ot = otMinutes();
     el.innerHTML = `
       <section class="card hero">
         <div class="hero-band"><div class="mascot-row">${mascot(face, 104)}<div class="bubble">${bubbleText(action)}</div></div></div>
@@ -100,10 +109,11 @@ export default function home(el, { user }) {
 
       <section class="card">
         ${cardTitle('clock', 'pink', t('วันนี้ของฉัน'), r?.check_in ? (r.late_minutes > 0 ? badge(t('สาย {n} นาที', { n: r.late_minutes }), 'warn', 'clock') : badge(t('ตรงเวลา'), 'ok', 'circle-check')) : badge(t('ยังไม่ได้เข้างาน'), 'mute', 'hourglass'))}
-        <div class="times">
+        <div class="times ${ot ? 'has-ot' : ''}">
           <div class="time-tile">${iconChip('log-in', 'mint', 16)}<small>${t('เข้างาน')}</small><b>${r?.check_in ?? '–'}</b></div>
           <div class="time-tile">${iconChip('log-out', 'lav', 16)}<small>${t('ออกงาน')}</small><b>${r?.check_out ?? '–'}</b></div>
           <div class="time-tile">${iconChip('timer', 'sky', 16)}<small>${t('ทำงานแล้ว')}</small><b id="worked">${fmtHours(worked())}</b></div>
+          ${ot ? `<div class="time-tile">${iconChip('moon', 'lemon', 16)}<small>${t('โอที')}</small><b id="ot">${fmtHours(ot / 60)}</b></div>` : ''}
         </div>
       </section>
 
@@ -128,6 +138,10 @@ export default function home(el, { user }) {
     if (st.record?.check_in_at && !st.record.check_out_at) {
       const w = el.querySelector('#worked');
       if (w) w.textContent = fmtHours(worked());
+      const ot = otMinutes();
+      if (!!ot !== !!el.querySelector('#ot')) return draw(); // the OT tile appears the minute the shift ends
+      const o = el.querySelector('#ot');
+      if (o) o.textContent = fmtHours(ot / 60);
       const note = el.querySelector('#ring-note');
       if (note) note.lastChild.textContent = workedNote();
     }
@@ -166,7 +180,7 @@ export default function home(el, { user }) {
         ${mascot(late ? 'oops' : isIn ? 'happy' : 'bye', 120)}
         <h2>${isIn ? (late ? t('เข้างานแล้ว (สายนิดนึง)') : t('เข้างานเรียบร้อย!')) : t('ออกงานเรียบร้อย!')}</h2>
         <div class="big">${isIn ? r.check_in : r.check_out}</div>
-        <p class="muted" style="font-weight:600;margin-top:6px">${isIn ? (late ? t('สายไป {n} นาที พรุ่งนี้สู้ ๆ นะ', { n: r.late_minutes }) : t('ตรงเวลาเป๊ะ วันนี้ก็สู้ ๆ นะ')) : t('วันนี้ทำงาน {h} ชม. เหนื่อยแล้ว กลับบ้านดี ๆ นะ', { h: fmtHours(worked()) })}</p>
+        <p class="muted" style="font-weight:600;margin-top:6px">${isIn ? (late ? t('สายไป {n} นาที พรุ่งนี้สู้ ๆ นะ', { n: r.late_minutes }) : t('ตรงเวลาเป๊ะ วันนี้ก็สู้ ๆ นะ')) : t('วันนี้ทำงาน {h} ชม. เหนื่อยแล้ว กลับบ้านดี ๆ นะ', { h: fmtHours(worked()) })}${!isIn && r.ot_minutes > 0 ? `<br>${t('โอที {h} ชม.', { h: fmtHours(r.ot_minutes / 60) })}` : ''}</p>
         <button class="btn primary" data-close>${icon('check', 18)}${t('ตกลง')}</button>
       </div>`);
     setTimeout(() => m.close(), 7000);

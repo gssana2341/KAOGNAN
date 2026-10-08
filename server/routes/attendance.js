@@ -2,7 +2,7 @@ const express = require('express');
 const { db } = require('../db');
 const { getSettings, publicSettings } = require('../settings');
 const { verifyPayload } = require('../qr');
-const { buildReport, lateMinutes, hhmm } = require('../report');
+const { buildReport, lateMinutes, otMinutes, hhmm } = require('../report');
 const { localParts, isDate, daysBetween } = require('../time');
 
 const router = express.Router();
@@ -21,7 +21,7 @@ async function todayState(userId, s) {
     date,
     record: rec && {
       check_in: hhmm(rec.check_in), check_out: hhmm(rec.check_out), check_in_at: rec.check_in, check_out_at: rec.check_out,
-      late_minutes: rec.late_minutes,
+      late_minutes: rec.late_minutes, ot_minutes: otMinutes(rec, s),
     },
     leave: leave || null,
     pending_leaves: pending.n,
