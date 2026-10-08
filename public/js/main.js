@@ -1,6 +1,7 @@
 import { api, hasToken, setToken, setUnauthorizedHandler } from './api.js';
 import { loadAssets } from './assets.js';
 import { applyBg, lastBg, resetCustomCache } from './bg.js';
+import { getLang, initLang, setLang, t } from './i18n.js';
 import { icon } from './icons.js';
 import { $, $$, avatar, displayName, esc, skeleton } from './util.js';
 
@@ -47,12 +48,12 @@ setUnauthorizedHandler(() => { state.user = null; navigate('/login'); render(); 
 
 function navItems(user) {
   const items = [
-    { tab: 'home', href: '#/home', icon: 'house', label: 'หน้าหลัก' },
-    { tab: 'history', href: '#/history', icon: 'calendar-days', label: 'ประวัติ' },
-    { tab: 'leave', href: '#/leave', icon: 'tree-palm', label: 'ลางาน' },
+    { tab: 'home', href: '#/home', icon: 'house', label: t('หน้าหลัก') },
+    { tab: 'history', href: '#/history', icon: 'calendar-days', label: t('ประวัติ') },
+    { tab: 'leave', href: '#/leave', icon: 'tree-palm', label: t('ลางาน') },
   ];
-  if (user.role === 'admin') items.push({ tab: 'admin', href: '#/admin', icon: 'layout-dashboard', label: 'จัดการ', pending: true });
-  items.push({ tab: 'me', href: '#/me', icon: 'user-round', label: 'ฉัน' });
+  if (user.role === 'admin') items.push({ tab: 'admin', href: '#/admin', icon: 'layout-dashboard', label: t('จัดการ'), pending: true });
+  items.push({ tab: 'me', href: '#/me', icon: 'user-round', label: t('ฉัน') });
   return items;
 }
 
@@ -64,7 +65,8 @@ function shell(user, activeTab) {
     <header class="topbar no-print">
       <a class="brand" href="#/home"><img src="/icons/icon-192.png" alt="">KaoNgan</a>
       <nav class="topnav">${items.map((i) => link(i, 18)).join('')}</nav>
-      <a class="who" href="#/me" aria-label="โปรไฟล์">${avatar(user, 34)}<span>${esc(displayName(user))}</span></a>
+      <button class="lang-btn" id="lang-toggle" type="button" aria-label="${t('เปลี่ยนภาษา')}">${icon('languages', 16)}<span>${getLang() === 'th' ? 'EN' : 'ไทย'}</span></button>
+      <a class="who" href="#/me" aria-label="${t('โปรไฟล์')}">${avatar(user, 34)}<span>${esc(displayName(user))}</span></a>
     </header>
     <main class="page" id="view"></main>
     <nav class="tabbar no-print">${items.map((i) => link(i, 23)).join('')}</nav>`;
@@ -112,6 +114,7 @@ async function render() {
 
 async function boot() {
   state.user = null;
+  await initLang();
   await loadAssets();
   if (hasToken()) { try { await refreshUser(); } catch { /* handled by render */ } }
   else await applyBg(lastBg());
@@ -120,6 +123,8 @@ async function boot() {
 }
 
 window.addEventListener('hashchange', render);
+window.addEventListener('langchange', () => render());
+app.addEventListener('click', (e) => { if (e.target.closest('#lang-toggle')) setLang(getLang() === 'th' ? 'en' : 'th'); });
 boot();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

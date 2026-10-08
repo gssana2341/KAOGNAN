@@ -1,7 +1,8 @@
 import { api } from './api.js';
 import { assets } from './assets.js';
+import { t } from './i18n.js';
 
-const FALLBACK = [{ id: 'sky', name: 'ฟ้าใสเมฆฟู', file: '/bg/sky.svg', mode: 'cover', tile: 240, thumb: '280px 280px' }];
+const FALLBACK = [{ id: 'sky', name: 'ฟ้าใสเมฆฟู', name_en: 'Fluffy sky', file: '/bg/sky.svg', mode: 'cover', tile: 240, thumb: '280px 280px' }];
 export const getBackgrounds = () => (assets.backgrounds.length ? assets.backgrounds : FALLBACK);
 
 const KEY = 'kn_bg';
@@ -51,7 +52,7 @@ export function fileToJpegDataUrl(file, max = 1280) {
       URL.revokeObjectURL(src);
       resolve(c.toDataURL('image/jpeg', 0.82));
     };
-    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('เปิดไฟล์รูปนี้ไม่ได้')); };
+    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error(t('เปิดไฟล์รูปนี้ไม่ได้'))); };
     img.src = src;
   });
 }

@@ -2,6 +2,7 @@
 //   sleepy -> not checked in yet   happy -> at work   bye -> checked out   oops -> error   chill -> on leave
 // If public/img/mascot/{sleepy,happy,bye,oops}.(webp|png|svg) all exist they replace this drawing (see docs/image-prompts.md).
 import { assets } from './assets.js';
+import { t } from './i18n.js';
 
 const INK = '#4a3548';
 let uid = 0;
@@ -39,7 +40,7 @@ export function mascot(state = 'happy', size = 120) {
   const id = `m${uid++}`;
   const bye = state === 'bye';
   const arm = (x, y, rot) => `<ellipse cx="${x}" cy="${y}" rx="8" ry="11.5" transform="rotate(${rot} ${x} ${y})" fill="#fff" stroke="${INK}" stroke-width="3.2"/>`;
-  return `<svg class="mascot ${state}" viewBox="0 0 140 150" width="${size}" height="${size * 150 / 140}" role="img" aria-label="แมวน้อย">
+  return `<svg class="mascot ${state}" viewBox="0 0 140 150" width="${size}" height="${size * 150 / 140}" role="img" aria-label="${t('แมวน้อย')}">
     <defs>
       <linearGradient id="${id}h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff0f7"/></linearGradient>
       <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#f1ebff"/></linearGradient>

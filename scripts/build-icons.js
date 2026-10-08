@@ -7,7 +7,7 @@ const NAMES = `house calendar-days tree-palm user-round settings qr-code scan-li
 bell lock palette image log-out log-in plus search printer refresh-cw monitor pencil chevron-left chevron-right file-spreadsheet heart sun moon
 thermometer briefcase sparkles hourglass shield-check triangle-alert layout-dashboard calendar-check calendar-x message-circle send trash-2
 flashlight flashlight-off smartphone building-2 map-pin party-popper leaf flame circle-x circle-alert info key-round upload star umbrella
-coffee user-cog sliders-horizontal list-checks wallet`.split(/\s+/).filter(Boolean);
+coffee user-cog sliders-horizontal list-checks wallet languages`.split(/\s+/).filter(Boolean);
 
 const dir = path.join(__dirname, '..', 'node_modules', 'lucide-static', 'icons');
 const entries = NAMES.map((n) => {

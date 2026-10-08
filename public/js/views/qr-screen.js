@@ -1,6 +1,7 @@
 import { api } from '../api.js';
-import { icon } from '../icons.js';
 import { assets } from '../assets.js';
+import { t } from '../i18n.js';
+import { icon } from '../icons.js';
 import { mascot } from '../mascot.js';
 import { esc, fitQr } from '../util.js';
 
@@ -33,47 +34,51 @@ export default function qrScreen(el) {
     pageStyle.textContent = `@page { size: ${pref.paper} ${pref.orient}; margin: ${margin}mm; }`;
     const rotating = data.mode === 'rotating';
     const host = location.host;
+    const warning = t('ตอนนี้ตั้งเป็นโหมด “QR เปลี่ยนทุกครั้ง” — ใช้แสดงบนจอ/แท็บเล็ตที่ทำงาน {noPrint} (QR จะหมดอายุ) ถ้าจะพิมพ์ให้ไปเปลี่ยนเป็น “QR ติดผนัง” ที่ {link} ก่อน', {
+      noPrint: `<b>${t('พิมพ์ไปติดผนังไม่ได้')}</b>`,
+      link: `<a href="#/admin/settings">${t('ตั้งค่า & QR')}</a>`,
+    });
 
     el.innerHTML = `
       <div class="qr-page">
         <div class="card qr-controls no-print">
           <div class="group">
-            <a class="btn small" href="#/admin/settings">${icon('chevron-left', 16)}กลับ</a>
+            <a class="btn small" href="#/admin/settings">${icon('chevron-left', 16)}${t('กลับ')}</a>
           </div>
           <div class="group">
-            <div class="seg" role="radiogroup" aria-label="แนวกระดาษ">
-              <input type="radio" name="orient" id="o-p" value="portrait" ${pref.orient === 'portrait' ? 'checked' : ''}><label for="o-p">แนวตั้ง</label>
-              <input type="radio" name="orient" id="o-l" value="landscape" ${pref.orient === 'landscape' ? 'checked' : ''}><label for="o-l">แนวนอน</label>
+            <div class="seg" role="radiogroup" aria-label="${t('แนวกระดาษ')}">
+              <input type="radio" name="orient" id="o-p" value="portrait" ${pref.orient === 'portrait' ? 'checked' : ''}><label for="o-p">${t('แนวตั้ง')}</label>
+              <input type="radio" name="orient" id="o-l" value="landscape" ${pref.orient === 'landscape' ? 'checked' : ''}><label for="o-l">${t('แนวนอน')}</label>
             </div>
-            <div class="seg" role="radiogroup" aria-label="ขนาดกระดาษ">
+            <div class="seg" role="radiogroup" aria-label="${t('ขนาดกระดาษ')}">
               <input type="radio" name="paper" id="p-a4" value="A4" ${pref.paper === 'A4' ? 'checked' : ''}><label for="p-a4">A4</label>
               <input type="radio" name="paper" id="p-a5" value="A5" ${pref.paper === 'A5' ? 'checked' : ''}><label for="p-a5">A5</label>
             </div>
-            <button class="btn primary" id="print" ${rotating ? 'disabled' : ''}>${icon('printer', 17)}พิมพ์</button>
+            <button class="btn primary" id="print" ${rotating ? 'disabled' : ''}>${icon('printer', 17)}${t('พิมพ์')}</button>
           </div>
         </div>
-        ${rotating ? `<div class="banner warn no-print">${icon('triangle-alert', 22)}<span>ตอนนี้ตั้งเป็นโหมด “QR เปลี่ยนทุกครั้ง” — ใช้แสดงบนจอ/แท็บเล็ตที่ทำงาน <b>พิมพ์ไปติดผนังไม่ได้</b> (QR จะหมดอายุ) ถ้าจะพิมพ์ให้ไปเปลี่ยนเป็น “QR ติดผนัง” ที่ <a href="#/admin/settings">ตั้งค่า & QR</a> ก่อน</span></div>` : ''}
+        ${rotating ? `<div class="banner warn no-print">${icon('triangle-alert', 22)}<span>${warning}</span></div>` : ''}
 
         <div class="poster ${pref.orient}${assets.mascot ? ' has-img' : ''}" style="--pwn:${printable[0]};--phn:${printable[1]}">
           <div class="p-band"><div class="p-mascot">${mascot('happy', 120)}</div></div>
           <div class="p-main">
             <div class="p-head">
               <h1 class="p-company">${esc(data.company_name)}</h1>
-              <p class="p-title">สแกนเพื่อ <b>เข้างาน</b> / <b>ออกงาน</b></p>
+              <p class="p-title">${t('สแกนเพื่อ')} <b>${t('เข้างาน')}</b> / <b>${t('ออกงาน')}</b></p>
             </div>
             <div class="p-qr">
               <div class="qr-frame"><i></i><i></i><i></i><i></i><div class="qr-slot">${data.svg}</div></div>
               ${rotating ? '<div class="countdown no-print p-count"><i></i></div>' : ''}
             </div>
             <ol class="p-steps">
-              <li><span class="n">1</span><span class="ic">${icon('smartphone', 26)}</span><span><span class="ln">เปิดแอป KaoNgan</span><span class="ln">แล้วล็อกอิน</span></span></li>
-              <li><span class="n">2</span><span class="ic">${icon('qr-code', 26)}</span><span><span class="ln">กด “สแกนเข้างาน”</span><span class="ln">หรือ “สแกนออกงาน”</span></span></li>
-              <li><span class="n">3</span><span class="ic">${icon('scan-line', 26)}</span><span><span class="ln">เล็งกล้องมาที่ QR นี้</span><span class="ln">รอจนขึ้นว่าสำเร็จ</span></span></li>
+              <li><span class="n">1</span><span class="ic">${icon('smartphone', 26)}</span><span><span class="ln">${t('เปิดแอป KaoNgan')}</span><span class="ln">${t('แล้วล็อกอิน')}</span></span></li>
+              <li><span class="n">2</span><span class="ic">${icon('qr-code', 26)}</span><span><span class="ln">${t('กด “{a}”', { a: t('สแกนเข้างาน') })}</span><span class="ln">${t('หรือ “{a}”', { a: t('สแกนออกงาน') })}</span></span></li>
+              <li><span class="n">3</span><span class="ic">${icon('scan-line', 26)}</span><span><span class="ln">${t('เล็งกล้องมาที่ QR นี้')}</span><span class="ln">${t('รอจนขึ้นว่าสำเร็จ')}</span></span></li>
             </ol>
           </div>
-          <div class="p-foot">เปิดแอปได้ที่ <b>${esc(host)}</b> · KaoNgan ระบบเช็คอินเข้างาน</div>
+          <div class="p-foot">${t('เปิดแอปได้ที่ {host} · KaoNgan ระบบเช็คอินเข้างาน', { host: `<b>${esc(host)}</b>` })}</div>
         </div>
-        ${rotating ? `<p class="small muted no-print">${icon('refresh-cw', 13)} QR เปลี่ยนอัตโนมัติทุก ${data.rotate_sec} วินาที — ห้ามถ่ายรูปส่งต่อนะ</p>` : ''}
+        ${rotating ? `<p class="small muted no-print">${icon('refresh-cw', 13)} ${t('QR เปลี่ยนอัตโนมัติทุก {n} วินาที — ห้ามถ่ายรูปส่งต่อนะ', { n: data.rotate_sec })}</p>` : ''}
       </div>`;
 
     stopFit = fitQr(el.querySelector('.qr-slot'));
@@ -91,7 +96,7 @@ export default function qrScreen(el) {
       render();
       if (data.mode === 'rotating') timer = setTimeout(load, data.expires_in * 1000 + 300);
     } catch (e) {
-      el.innerHTML = `<div class="qr-page"><div class="card">${esc(e.message)}<br><a class="btn" href="#/admin/settings">กลับ</a></div></div>`;
+      el.innerHTML = `<div class="qr-page"><div class="card">${esc(e.message)}<br><a class="btn" href="#/admin/settings">${t('กลับ')}</a></div></div>`;
     }
   }
 

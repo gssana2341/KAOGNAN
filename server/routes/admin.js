@@ -163,7 +163,7 @@ router.put('/admin/attendance', async (req, res) => {
 router.get('/admin/export.xlsx', async (req, res) => {
   const r = parseRange(req.query);
   if (r.error) return res.status(400).json({ error: r.error });
-  await sendExcel(res, r);
+  await sendExcel(res, { ...r, lang: req.query.lang === 'en' ? 'en' : 'th' });
 });
 
 /* ---------- leave approval ---------- */

@@ -1,13 +1,19 @@
 import { api } from '../api.js';
+import { getLang, locale, t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { mascot } from '../mascot.js';
 import { openScanner } from '../scanner.js';
 import {
-  DOW_SHORT, LEAVE_TYPES, PART_LABEL, STATUS, addDays, badge, buzz, cardTitle, confetti, displayName, esc, fmtDate, fmtHours, iconChip, openModal, toast, todayStr, weekStart,
+  LEAVE_TYPES, PART_LABEL, STATUS, addDays, badge, buzz, cardTitle, confetti, displayName, dowShort, esc, fmtDate, fmtHours, iconChip, openModal, toast, todayStr, weekStart,
 } from '../util.js';
 
 const TZ = 'Asia/Bangkok';
-const clockFmt = new Intl.DateTimeFormat('th-TH', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+let clockFmt = null;
+let clockLang = null;
+const clock = (ms) => {
+  if (clockLang !== getLang()) { clockFmt = new Intl.DateTimeFormat(locale(), { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }); clockLang = getLang(); }
+  return clockFmt.format(ms);
+};
 const hourOf = (ms) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hour12: false }).format(ms)) % 24;
 const RING_LEN = 2 * Math.PI * 96;
 
@@ -20,7 +26,7 @@ export default function home(el, { user }) {
   let timer = null;
   const now = () => Date.now() + skew;
 
-  const greeting = () => { const h = hourOf(now()); return h < 12 ? 'สวัสดีตอนเช้า' : h < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น'; };
+  const greeting = () => { const h = hourOf(now()); return h < 12 ? t('สวัสดีตอนเช้า') : h < 17 ? t('สวัสดีตอนบ่าย') : t('สวัสดีตอนเย็น'); };
 
   async function load() {
     const monday = weekStart(todayStr());
@@ -36,14 +42,15 @@ export default function home(el, { user }) {
     return Math.max(0, (end - Date.parse(r.check_in_at)) / 3600000);
   };
   const shiftHours = () => Math.max(1, toHours(st.settings.work_end) - toHours(st.settings.work_start));
+  const workedNote = () => t('ทำงานแล้ว {a} จาก {b} ชม.', { a: fmtHours(worked()), b: fmtHours(shiftHours()) });
 
   function bubbleText(action) {
     const h = hourOf(now());
     const afterWork = h * 60 >= toHours(st.settings.work_end) * 60;
-    if (st.leave && action === 'in') return 'วันนี้ลาอยู่นะ พักผ่อนให้เต็มที่เลย~';
-    if (action === 'in') return h < 12 ? 'อรุณสวัสดิ์~ อย่าลืมสแกนเข้างานนะ' : 'ยังไม่ได้สแกนเข้างานเลยน้า';
-    if (action === 'out') return afterWork ? 'เลิกงานแล้ว! อย่าลืมสแกนออกนะ' : 'กำลังทำงานอยู่ สู้ ๆ นะ!';
-    return 'เหนื่อยแล้วนะ กลับบ้านดี ๆ ~';
+    if (st.leave && action === 'in') return t('วันนี้ลาอยู่นะ พักผ่อนให้เต็มที่เลย~');
+    if (action === 'in') return h < 12 ? t('อรุณสวัสดิ์~ อย่าลืมสแกนเข้างานนะ') : t('ยังไม่ได้สแกนเข้างานเลยน้า');
+    if (action === 'out') return afterWork ? t('เลิกงานแล้ว! อย่าลืมสแกนออกนะ') : t('กำลังทำงานอยู่ สู้ ๆ นะ!');
+    return t('เหนื่อยแล้วนะ กลับบ้านดี ๆ ~');
   }
 
   function weekStrip() {
@@ -57,7 +64,7 @@ export default function home(el, { user }) {
       const waiting = today && (!r || r.status === 'pending');
       const cls = r && r.status !== 'pending' ? s.cls : '';
       const ic = r && r.status !== 'pending' ? icon(s.icon, 18) : '';
-      return `<div class="wday ${today ? 'today' : ''} ${waiting ? 'waiting' : ''}"><span>${DOW_SHORT[(i + 1) % 7]}</span><span class="wdot ${cls}">${ic}</span></div>`;
+      return `<div class="wday ${today ? 'today' : ''} ${waiting ? 'waiting' : ''}"><span>${dowShort((i + 1) % 7)}</span><span class="wdot ${cls}">${ic}</span></div>`;
     }).join('');
   }
 
@@ -66,8 +73,8 @@ export default function home(el, { user }) {
     const action = st.next_action;
     const face = st.leave && action === 'in' ? 'chill' : action === 'in' ? 'sleepy' : action === 'out' ? 'happy' : 'bye';
     const btn = action === 'in'
-      ? { cls: 'in', text: 'สแกนเข้างาน', ic: icon('qr-code', 58) }
-      : action === 'out' ? { cls: 'out', text: 'สแกนออกงาน', ic: icon('qr-code', 58) } : { cls: 'done', text: 'วันนี้เรียบร้อย', ic: icon('party-popper', 54) };
+      ? { cls: 'in', text: t('สแกนเข้างาน'), ic: icon('qr-code', 58) }
+      : action === 'out' ? { cls: 'out', text: t('สแกนออกงาน'), ic: icon('qr-code', 58) } : { cls: 'done', text: t('วันนี้เรียบร้อย'), ic: icon('party-popper', 54) };
     const ratio = action === 'done' ? 1 : Math.min(1, (worked() ?? 0) / shiftHours());
     const s = st.settings;
     el.innerHTML = `
@@ -84,28 +91,28 @@ export default function home(el, { user }) {
           </svg>
           <button class="scan-btn ${btn.cls}" id="scan" ${action === 'done' ? 'disabled' : ''}>${btn.ic}<span>${btn.text}</span></button>
         </div>
-        ${action === 'out' ? `<div class="date-chip" id="ring-note">${icon('timer', 15)}ทำงานแล้ว ${fmtHours(worked())} จาก ${fmtHours(shiftHours())} ชม.</div>` : ''}
-        <div class="shift-line"><span>${icon('clock', 14)}เวลางาน ${esc(s.work_start)} – ${esc(s.work_end)} น.</span><span>${icon('map-pin', 14)}สแกน QR ที่ทำงานเท่านั้น</span></div>
+        ${action === 'out' ? `<div class="date-chip" id="ring-note">${icon('timer', 15)}${workedNote()}</div>` : ''}
+        <div class="shift-line"><span>${icon('clock', 14)}${t('เวลางาน {a} – {b} น.', { a: esc(s.work_start), b: esc(s.work_end) })}</span><span>${icon('map-pin', 14)}${t('สแกน QR ที่ทำงานเท่านั้น')}</span></div>
         </div>
       </section>
 
-      ${st.leave ? `<div class="banner info">${icon('tree-palm', 22)}<span>วันนี้คุณลา${esc(LEAVE_TYPES[st.leave.type].label)}${PART_LABEL[st.leave.part]} — ถ้ามาทำงานก็สแกนได้ตามปกติ</span></div>` : ''}
+      ${st.leave ? `<div class="banner info">${icon('tree-palm', 22)}<span>${t('วันนี้คุณ{type}{part} — ถ้ามาทำงานก็สแกนได้ตามปกติ', { type: esc(LEAVE_TYPES[st.leave.type].label), part: PART_LABEL[st.leave.part] })}</span></div>` : ''}
 
       <section class="card">
-        ${cardTitle('clock', 'pink', 'วันนี้ของฉัน', r?.check_in ? (r.late_minutes > 0 ? badge(`สาย ${r.late_minutes} นาที`, 'warn', 'clock') : badge('ตรงเวลา', 'ok', 'circle-check')) : badge('ยังไม่ได้เข้างาน', 'mute', 'hourglass'))}
+        ${cardTitle('clock', 'pink', t('วันนี้ของฉัน'), r?.check_in ? (r.late_minutes > 0 ? badge(t('สาย {n} นาที', { n: r.late_minutes }), 'warn', 'clock') : badge(t('ตรงเวลา'), 'ok', 'circle-check')) : badge(t('ยังไม่ได้เข้างาน'), 'mute', 'hourglass'))}
         <div class="times">
-          <div class="time-tile">${iconChip('log-in', 'mint', 16)}<small>เข้างาน</small><b>${r?.check_in ?? '–'}</b></div>
-          <div class="time-tile">${iconChip('log-out', 'lav', 16)}<small>ออกงาน</small><b>${r?.check_out ?? '–'}</b></div>
-          <div class="time-tile">${iconChip('timer', 'sky', 16)}<small>ทำงานแล้ว</small><b id="worked">${fmtHours(worked())}</b></div>
+          <div class="time-tile">${iconChip('log-in', 'mint', 16)}<small>${t('เข้างาน')}</small><b>${r?.check_in ?? '–'}</b></div>
+          <div class="time-tile">${iconChip('log-out', 'lav', 16)}<small>${t('ออกงาน')}</small><b>${r?.check_out ?? '–'}</b></div>
+          <div class="time-tile">${iconChip('timer', 'sky', 16)}<small>${t('ทำงานแล้ว')}</small><b id="worked">${fmtHours(worked())}</b></div>
         </div>
       </section>
 
       <section class="card">
-        ${cardTitle('calendar-check', 'mint', 'สัปดาห์นี้', '<a class="btn small" href="#/history">ดูประวัติ</a>')}
+        ${cardTitle('calendar-check', 'mint', t('สัปดาห์นี้'), `<a class="btn small" href="#/history">${t('ดูประวัติ')}</a>`)}
         <div class="week">${weekStrip()}</div>
       </section>
 
-      ${st.pending_leaves ? `<a class="banner warn" href="#/leave" style="text-decoration:none;color:inherit">${icon('hourglass', 22)}<span>มีใบลารออนุมัติ ${st.pending_leaves} ใบ</span></a>` : ''}`;
+      ${st.pending_leaves ? `<a class="banner warn" href="#/leave" style="text-decoration:none;color:inherit">${icon('hourglass', 22)}<span>${t('มีใบลารออนุมัติ {n} ใบ', { n: st.pending_leaves })}</span></a>` : ''}`;
     el.querySelector('#scan')?.addEventListener('click', startScan);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const p = el.querySelector('#prog');
@@ -117,20 +124,20 @@ export default function home(el, { user }) {
   function tick() {
     const c = el.querySelector('#clock');
     if (!c) return;
-    c.textContent = clockFmt.format(now());
+    c.textContent = clock(now());
     if (st.record?.check_in_at && !st.record.check_out_at) {
       const w = el.querySelector('#worked');
       if (w) w.textContent = fmtHours(worked());
       const note = el.querySelector('#ring-note');
-      if (note) note.lastChild.textContent = `ทำงานแล้ว ${fmtHours(worked())} จาก ${fmtHours(shiftHours())} ชม.`;
+      if (note) note.lastChild.textContent = workedNote();
     }
   }
 
   async function startScan() {
     const action = st.next_action;
     let result = null;
-    const ok = await openScanner(action === 'in' ? 'สแกนเข้างาน' : 'สแกนออกงาน', async (text) => {
-      if (!text.startsWith('KN1:')) return { done: false, message: 'นี่ไม่ใช่ QR ของที่ทำงานนะ ลองสแกนใหม่' };
+    const ok = await openScanner(action === 'in' ? t('สแกนเข้างาน') : t('สแกนออกงาน'), async (text) => {
+      if (!text.startsWith('KN1:')) return { done: false, message: t('นี่ไม่ใช่ QR ของที่ทำงานนะ ลองสแกนใหม่') };
       try {
         result = await api.post('/checkin', { action, code: text });
         return { done: true };
@@ -157,15 +164,15 @@ export default function home(el, { user }) {
     const m = openModal(`
       <div class="result-modal">
         ${mascot(late ? 'oops' : isIn ? 'happy' : 'bye', 120)}
-        <h2>${isIn ? (late ? 'เข้างานแล้ว (สายนิดนึง)' : 'เข้างานเรียบร้อย!') : 'ออกงานเรียบร้อย!'}</h2>
+        <h2>${isIn ? (late ? t('เข้างานแล้ว (สายนิดนึง)') : t('เข้างานเรียบร้อย!')) : t('ออกงานเรียบร้อย!')}</h2>
         <div class="big">${isIn ? r.check_in : r.check_out}</div>
-        <p class="muted" style="font-weight:600;margin-top:6px">${isIn ? (late ? `สายไป ${r.late_minutes} นาที พรุ่งนี้สู้ ๆ นะ` : 'ตรงเวลาเป๊ะ วันนี้ก็สู้ ๆ นะ') : `วันนี้ทำงาน ${fmtHours(worked())} ชม. เหนื่อยแล้ว กลับบ้านดี ๆ นะ`}</p>
-        <button class="btn primary" data-close>${icon('check', 18)}ตกลง</button>
+        <p class="muted" style="font-weight:600;margin-top:6px">${isIn ? (late ? t('สายไป {n} นาที พรุ่งนี้สู้ ๆ นะ', { n: r.late_minutes }) : t('ตรงเวลาเป๊ะ วันนี้ก็สู้ ๆ นะ')) : t('วันนี้ทำงาน {h} ชม. เหนื่อยแล้ว กลับบ้านดี ๆ นะ', { h: fmtHours(worked()) })}</p>
+        <button class="btn primary" data-close>${icon('check', 18)}${t('ตกลง')}</button>
       </div>`);
     setTimeout(() => m.close(), 7000);
   }
 
-  load().catch((e) => { el.innerHTML = `<div class="card empty">${esc(e.message)}<br><button class="btn" id="retry">ลองใหม่</button></div>`; el.querySelector('#retry').onclick = () => load(); });
+  load().catch((e) => { el.innerHTML = `<div class="card empty">${esc(e.message)}<br><button class="btn" id="retry">${t('ลองใหม่')}</button></div>`; el.querySelector('#retry').onclick = () => load(); });
   timer = setInterval(tick, 1000);
   const onVisible = () => { if (!document.hidden) load().catch(() => {}); };
   document.addEventListener('visibilitychange', onVisible);

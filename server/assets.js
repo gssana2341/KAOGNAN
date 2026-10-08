@@ -26,6 +26,7 @@ function listBackgrounds() {
     return {
       id,
       name: String(m.name || id),
+      name_en: String(m.name_en || m.name || id),
       file: `/bg/${found.get(id)}`,
       mode: m.mode === 'tile' ? 'tile' : 'cover',
       tile: Number(m.tile) > 0 ? Number(m.tile) : 240,

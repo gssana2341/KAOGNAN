@@ -1,10 +1,42 @@
 {
-  "sky": { "name": "ฟ้าใสเมฆฟู", "thumb": "280px 280px" },
-  "candy": { "name": "ชมพูหวาน", "thumb": "280px 280px" },
-  "mint": { "name": "มิ้นต์สดชื่น", "thumb": "280px 280px" },
-  "night": { "name": "ราตรีดาวพราว", "thumb": "280px 280px" },
-  "paws": { "name": "รอยเท้าเหมียว", "thumb": "280px 280px" },
-  "sunny": { "name": "ทุ่งดอกเดซี่", "thumb": "280px 280px" },
-  "boba": { "name": "ชานมไข่มุก", "thumb": "280px 280px" },
-  "lavender": { "name": "ลาเวนเดอร์ฟองสบู่", "thumb": "280px 280px" }
+  "sky": {
+    "name": "ฟ้าใสเมฆฟู",
+    "thumb": "280px 280px",
+    "name_en": "Fluffy sky"
+  },
+  "candy": {
+    "name": "ชมพูหวาน",
+    "thumb": "280px 280px",
+    "name_en": "Candy pink"
+  },
+  "mint": {
+    "name": "มิ้นต์สดชื่น",
+    "thumb": "280px 280px",
+    "name_en": "Fresh mint"
+  },
+  "night": {
+    "name": "ราตรีดาวพราว",
+    "thumb": "280px 280px",
+    "name_en": "Starry night"
+  },
+  "paws": {
+    "name": "รอยเท้าเหมียว",
+    "thumb": "280px 280px",
+    "name_en": "Kitty paws"
+  },
+  "sunny": {
+    "name": "ทุ่งดอกเดซี่",
+    "thumb": "280px 280px",
+    "name_en": "Daisy meadow"
+  },
+  "boba": {
+    "name": "ชานมไข่มุก",
+    "thumb": "280px 280px",
+    "name_en": "Bubble tea"
+  },
+  "lavender": {
+    "name": "ลาเวนเดอร์ฟองสบู่",
+    "thumb": "280px 280px",
+    "name_en": "Lavender bubbles"
+  }
 }

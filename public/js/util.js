@@ -1,4 +1,5 @@
 import { icon } from './icons.js';
+import { getLang, locale, t } from './i18n.js';
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -10,14 +11,15 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
 const utc = (d) => new Date(d + 'T00:00:00Z');
 export const todayStr = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
-export const fmtDate = (d) => utc(d).toLocaleDateString('th-TH', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-export const fmtDateShort = (d) => utc(d).toLocaleDateString('th-TH', { timeZone: 'UTC', day: 'numeric', month: 'short' });
-export const fmtDay = (d) => utc(d).toLocaleDateString('th-TH', { timeZone: 'UTC', weekday: 'short' });
-export const fmtMonth = (ym) => utc(ym + '-01').toLocaleDateString('th-TH', { timeZone: 'UTC', month: 'long', year: 'numeric' });
+export const fmtDate = (d) => utc(d).toLocaleDateString(locale(), { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+export const fmtDateShort = (d) => utc(d).toLocaleDateString(locale(), { timeZone: 'UTC', day: 'numeric', month: 'short' });
+export const fmtDay = (d) => utc(d).toLocaleDateString(locale(), { timeZone: 'UTC', weekday: 'short' });
+export const fmtMonth = (ym) => utc(ym + '-01').toLocaleDateString(locale(), { timeZone: 'UTC', month: 'long', year: 'numeric' });
 export const dayNum = (d) => Number(d.slice(8));
 export const dow = (d) => utc(d).getUTCDay();
 export const isWeekend = (d) => [0, 6].includes(dow(d));
-export const DOW_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+// short weekday name, 0 = Sunday (2023-01-01 was a Sunday)
+export const dowShort = (i) => new Date(Date.UTC(2023, 0, 1 + i)).toLocaleDateString(locale(), { timeZone: 'UTC', weekday: 'short' });
 
 export function addDays(d, n) {
   const x = utc(d);
@@ -43,25 +45,25 @@ export const fmtDays = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 /* ---------- vocab ---------- */
 
 export const STATUS = {
-  present: { label: 'มาทำงาน', cls: 'ok', icon: 'check' },
-  late: { label: 'สาย', cls: 'warn', icon: 'clock' },
-  leave: { label: 'ลา', cls: 'info', icon: 'tree-palm' },
-  absent: { label: 'ขาด', cls: 'bad', icon: 'x' },
-  pending: { label: 'ยังไม่เข้า', cls: 'mute', icon: 'hourglass' },
+  present: { get label() { return t('มาทำงาน'); }, cls: 'ok', icon: 'check' },
+  late: { get label() { return t('สาย'); }, cls: 'warn', icon: 'clock' },
+  leave: { get label() { return t('ลา'); }, cls: 'info', icon: 'tree-palm' },
+  absent: { get label() { return t('ขาด'); }, cls: 'bad', icon: 'x' },
+  pending: { get label() { return t('ยังไม่เข้า'); }, cls: 'mute', icon: 'hourglass' },
 };
 export const LEAVE_TYPES = {
-  sick: { label: 'ลาป่วย', icon: 'thermometer', tone: 'red' },
-  personal: { label: 'ลากิจ', icon: 'briefcase', tone: 'lav' },
-  vacation: { label: 'ลาพักร้อน', icon: 'tree-palm', tone: 'sky' },
-  other: { label: 'อื่น ๆ', icon: 'sparkles', tone: 'pink' },
+  sick: { get label() { return t('ลาป่วย'); }, icon: 'thermometer', tone: 'red' },
+  personal: { get label() { return t('ลากิจ'); }, icon: 'briefcase', tone: 'lav' },
+  vacation: { get label() { return t('ลาพักร้อน'); }, icon: 'tree-palm', tone: 'sky' },
+  other: { get label() { return t('อื่น ๆ'); }, icon: 'sparkles', tone: 'pink' },
 };
 export const LEAVE_STATUS = {
-  pending: { label: 'รออนุมัติ', cls: 'mute', icon: 'hourglass' },
-  approved: { label: 'อนุมัติแล้ว', cls: 'ok', icon: 'circle-check' },
-  rejected: { label: 'ไม่อนุมัติ', cls: 'bad', icon: 'circle-x' },
-  cancelled: { label: 'ยกเลิก', cls: 'mute', icon: 'x' },
+  pending: { get label() { return t('รออนุมัติ'); }, cls: 'mute', icon: 'hourglass' },
+  approved: { get label() { return t('อนุมัติแล้ว'); }, cls: 'ok', icon: 'circle-check' },
+  rejected: { get label() { return t('ไม่อนุมัติ'); }, cls: 'bad', icon: 'circle-x' },
+  cancelled: { get label() { return t('ยกเลิกแล้ว'); }, cls: 'mute', icon: 'x' },
 };
-export const PART_LABEL = { full: '', am: ' (ครึ่งวันเช้า)', pm: ' (ครึ่งวันบ่าย)' };
+export const PART_LABEL = { full: '', get am() { return ' ' + t('(ครึ่งวันเช้า)'); }, get pm() { return ' ' + t('(ครึ่งวันบ่าย)'); } };
 
 /* ---------- small UI pieces ---------- */
 
@@ -71,13 +73,16 @@ export const statusBadge = (row) => {
   const st = STATUS[row.status];
   let text = st.label;
   let ic = st.icon;
-  if (row.status === 'late') text += ` ${row.late_minutes} น.`;
+  if (row.status === 'late') text = t('สาย {n} น.', { n: row.late_minutes });
   if (row.leave_type) {
     ic = LEAVE_TYPES[row.leave_type].icon;
-    text = row.status === 'leave' ? `${LEAVE_TYPES[row.leave_type].label}${PART_LABEL[row.leave_part] ?? ''}` : `${text} · ลาครึ่งวัน`;
+    text = row.status === 'leave' ? `${LEAVE_TYPES[row.leave_type].label}${PART_LABEL[row.leave_part] ?? ''}` : t('{status} · ลาครึ่งวัน', { status: text });
   }
   return badge(text, st.cls, ic);
 };
+
+// language switch pill (clicks are handled in main.js)
+export const langButton = (cls = '') => `<button class="lang-btn ${cls}" id="lang-toggle" type="button" aria-label="${t('เปลี่ยนภาษา')}">${icon('languages', 16)}<span>${getLang() === 'th' ? 'EN' : 'ไทย'}</span></button>`;
 
 export const displayName = (u) => u.nickname || u.full_name.split(' ')[0];
 
@@ -142,10 +147,10 @@ export function openModal(html, { onClose } = {}) {
   return { el: wrap.firstElementChild, close };
 }
 
-export const confirmBox = (message, okLabel = 'ตกลง') => new Promise((resolve) => {
+export const confirmBox = (message, okLabel = t('ตกลง')) => new Promise((resolve) => {
   let answered = false;
   const m = openModal(`<p class="confirm-msg">${esc(message)}</p>
-    <div class="row end"><button class="btn" data-close>ยกเลิก</button><button class="btn primary" data-ok>${esc(okLabel)}</button></div>`,
+    <div class="row end"><button class="btn" data-close>${t('ยกเลิก')}</button><button class="btn primary" data-ok>${esc(okLabel)}</button></div>`,
   { onClose: () => !answered && resolve(false) });
   m.el.querySelector('[data-ok]').addEventListener('click', () => { answered = true; m.close(); resolve(true); });
 });
@@ -164,7 +169,7 @@ export function formData(form) {
 // Disables the button while `fn` runs and surfaces errors as a toast.
 export async function busy(btn, fn) {
   btn?.setAttribute('disabled', '');
-  try { return await fn(); } catch (e) { toast(e.message || 'เกิดข้อผิดพลาด', 'bad'); } finally { btn?.removeAttribute('disabled'); }
+  try { return await fn(); } catch (e) { toast(e.message || t('เกิดข้อผิดพลาด'), 'bad'); } finally { btn?.removeAttribute('disabled'); }
 }
 
 export function loadScript(src) {
@@ -172,7 +177,7 @@ export function loadScript(src) {
     const s = document.createElement('script');
     s.src = src;
     s.onload = resolve;
-    s.onerror = () => reject(new Error('โหลดสคริปต์ไม่สำเร็จ'));
+    s.onerror = () => reject(new Error(t('โหลดสคริปต์ไม่สำเร็จ')));
     document.head.append(s);
   });
 }

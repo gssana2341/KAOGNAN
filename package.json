@@ -12,6 +12,7 @@
     "icons": "node scripts/build-icons.js",
     "app-icon": "node scripts/make-icons.js",
     "mascot": "node scripts/make-mascot.js",
+    "i18n:check": "node scripts/i18n-keys.js",
     "test": "node --test test/api.test.js"
   },
   "keywords": [],

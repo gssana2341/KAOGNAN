@@ -47,7 +47,7 @@ function renderSvg(text, margin = 2) {
       d += `M${start + margin} ${r + margin}h${c - start}v1h-${c - start}z`;
     }
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" data-modules="${total}" shape-rendering="crispEdges" role="img" aria-label="QR ของที่ทำงาน">`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" data-modules="${total}" shape-rendering="crispEdges" role="img" aria-label="QR">`
     + `<rect width="${total}" height="${total}" fill="#fff"/><path d="${d}" fill="#3b2a3f" stroke="#3b2a3f" stroke-width=".03"/></svg>`;
 }
 

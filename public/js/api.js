@@ -1,4 +1,6 @@
 // window.KN_API_BASE lets a wrapped mobile app point at the real server (see config.js).
+import { t } from './i18n.js';
+
 const BASE = (window.KN_API_BASE || '') + '/api';
 const KEY = 'kn_token';
 
@@ -27,12 +29,12 @@ async function request(method, url, body) {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่', 0);
+    throw new ApiError(t('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'), 0);
   }
   if (res.ok) return res;
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && token) { setToken(null); onUnauthorized(); }
-  throw new ApiError(data.error || `เกิดข้อผิดพลาด (${res.status})`, res.status, data);
+  throw new ApiError(data.error ? t(data.error) : t('เกิดข้อผิดพลาด ({status})', { status: res.status }), res.status, data);
 }
 
 export const api = {

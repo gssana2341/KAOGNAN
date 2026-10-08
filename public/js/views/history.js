@@ -1,8 +1,9 @@
 import { api } from '../api.js';
+import { t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { mascot } from '../mascot.js';
 import {
-  DOW_SHORT, STATUS, addDays, addMonths, dayNum, dow, esc, fmtDay, fmtDays, fmtHours, fmtMonth, iconChip, isWeekend, skeleton, statusBadge, todayStr,
+  STATUS, dowShort, addDays, addMonths, dayNum, dow, esc, fmtDay, fmtDays, fmtHours, fmtMonth, iconChip, isWeekend, skeleton, statusBadge, todayStr,
 } from '../util.js';
 
 const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
@@ -21,8 +22,8 @@ export default function history(el) {
       const cls = r && r.status !== 'pending' ? STATUS[r.status].cls : '';
       cells.push(`<${r ? 'button' : 'span'} class="c ${cls} ${r ? 'tap' : ''} ${date === todayStr() ? 'today' : ''}" ${r ? `data-date="${date}"` : ''}>${dayNum(date)}</${r ? 'button' : 'span'}>`);
     }
-    return `<div class="cal">${MON_FIRST.map((i) => `<span class="h">${DOW_SHORT[i]}</span>`).join('')}${cells.join('')}</div>
-      <div class="legend"><span><i style="background:var(--mint-l)"></i>มาทำงาน</span><span><i style="background:var(--lemon-l)"></i>สาย</span><span><i style="background:var(--sky-l)"></i>ลา</span><span><i style="background:var(--red-l)"></i>ขาด</span></div>`;
+    return `<div class="cal">${MON_FIRST.map((i) => `<span class="h">${dowShort(i)}</span>`).join('')}${cells.join('')}</div>
+      <div class="legend"><span><i style="background:var(--mint-l)"></i>${t('มาทำงาน')}</span><span><i style="background:var(--lemon-l)"></i>${t('สาย')}</span><span><i style="background:var(--sky-l)"></i>${t('ลา')}</span><span><i style="background:var(--red-l)"></i>${t('ขาด')}</span></div>`;
   }
 
   async function load() {
@@ -31,16 +32,16 @@ export default function history(el) {
     const s = d.summary;
     el.innerHTML = `
       <section class="card month-nav">
-        <button class="btn round" data-m="-1" aria-label="เดือนก่อน">${icon('chevron-left', 20)}</button>
+        <button class="btn round" data-m="-1" aria-label="${t('เดือนก่อน')}">${icon('chevron-left', 20)}</button>
         <h2>${fmtMonth(month)}</h2>
-        <button class="btn round" data-m="1" aria-label="เดือนถัดไป" ${month >= thisMonth ? 'disabled' : ''}>${icon('chevron-right', 20)}</button>
+        <button class="btn round" data-m="1" aria-label="${t('เดือนถัดไป')}" ${month >= thisMonth ? 'disabled' : ''}>${icon('chevron-right', 20)}</button>
       </section>
       ${s ? `<section class="card"><div class="stats">
-        <div class="stat">${iconChip('circle-check', 'mint', 17)}<b>${s.present}</b><span>วันที่มาทำงาน</span></div>
-        <div class="stat">${iconChip('clock', 'lemon', 17)}<b>${s.late_count}</b><span>มาสาย (ครั้ง)</span></div>
-        <div class="stat">${iconChip('tree-palm', 'sky', 17)}<b>${fmtDays(s.leave_days)}</b><span>วันลา</span></div>
-        <div class="stat">${iconChip('circle-x', 'red', 17)}<b>${s.absent}</b><span>วันขาด</span></div>
-        <div class="stat">${iconChip('timer', 'lav', 17)}<b>${fmtHours(s.hours)}</b><span>ชม.ทำงานรวม</span></div>
+        <div class="stat">${iconChip('circle-check', 'mint', 17)}<b>${s.present}</b><span>${t('วันที่มาทำงาน')}</span></div>
+        <div class="stat">${iconChip('clock', 'lemon', 17)}<b>${s.late_count}</b><span>${t('มาสาย (ครั้ง)')}</span></div>
+        <div class="stat">${iconChip('tree-palm', 'sky', 17)}<b>${fmtDays(s.leave_days)}</b><span>${t('วันลา')}</span></div>
+        <div class="stat">${iconChip('circle-x', 'red', 17)}<b>${s.absent}</b><span>${t('วันขาด')}</span></div>
+        <div class="stat">${iconChip('timer', 'lav', 17)}<b>${fmtHours(s.hours)}</b><span>${t('ชม.ทำงานรวม')}</span></div>
       </div></section>` : ''}
       <section class="card">${calendar(d)}</section>
       <section class="list">
@@ -48,12 +49,12 @@ export default function history(el) {
           <div class="item s-${STATUS[r.status].cls} ${isWeekend(r.date) ? 'weekend' : ''}" data-row="${r.date}">
             <div class="date"><b>${dayNum(r.date)}</b><small>${fmtDay(r.date)}</small></div>
             <div class="grow">
-              <div class="times-line">${r.check_in ? `${r.check_in} – ${r.check_out ?? '<span class="muted">ยังไม่ออก</span>'}` : '<span class="muted">ไม่มีเวลาสแกน</span>'}</div>
-              ${r.hours != null ? `<div class="small muted">ทำงาน ${fmtHours(r.hours)} ชม.</div>` : r.check_in && !r.check_out && r.date < todayStr() ? '<div class="small muted">ลืมสแกนออกหรือเปล่านะ? แจ้งแอดมินได้เลย</div>' : ''}
+              <div class="times-line">${r.check_in ? `${r.check_in} – ${r.check_out ?? `<span class="muted">${t('ยังไม่ออก')}</span>`}` : `<span class="muted">${t('ไม่มีเวลาสแกน')}</span>`}</div>
+              ${r.hours != null ? `<div class="small muted">${t('ทำงาน {h} ชม.', { h: fmtHours(r.hours) })}</div>` : r.check_in && !r.check_out && r.date < todayStr() ? `<div class="small muted">${t('ลืมสแกนออกหรือเปล่านะ? แจ้งแอดมินได้เลย')}</div>` : ''}
               ${r.note ? `<div class="small muted">${icon('message-circle', 13)} ${esc(r.note)}</div>` : ''}
             </div>
             ${statusBadge(r)}
-          </div>`).join('') : `<div class="card empty">${mascot('sleepy', 96)}<p>ยังไม่มีข้อมูลในเดือนนี้</p></div>`}
+          </div>`).join('') : `<div class="card empty">${mascot('sleepy', 96)}<p>${t('ยังไม่มีข้อมูลในเดือนนี้')}</p></div>`}
       </section>`;
   }
 

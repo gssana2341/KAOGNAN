@@ -339,3 +339,36 @@ test('the QR drawn by the server decodes back to the exact payload (scannable)',
   }
   assert.equal(jsQR(px, size, size)?.data, qr.payload);
 });
+
+test('every UI text and server message has an English translation (npm run i18n:check)', () => {
+  const { allKeys } = require('../scripts/i18n-keys');
+  const dict = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'i18n', 'en.json'), 'utf8'));
+  const keys = allKeys();
+  const missing = [...keys].filter(([k]) => !(k in dict)).map(([k, f]) => `${k}  (${f})`);
+  assert.deepEqual(missing, [], 'missing English for:\n' + missing.join('\n'));
+  const unused = Object.keys(dict).filter((k) => !keys.has(k));
+  assert.deepEqual(unused, [], 'en.json has entries nothing uses:\n' + unused.join('\n'));
+
+  const placeholders = (s) => (s.match(/\{\w+\}/g) || []).sort().join(',');
+  for (const [th, en] of Object.entries(dict)) {
+    assert.ok(en.trim(), `empty translation for ${th}`);
+    assert.doesNotMatch(en, /[฀-๿]/, `Thai text left in the English translation of "${th}"`);
+    const parts = en.split('|');
+    assert.ok(parts.length <= 2, `at most one "|" (singular|plural): ${th}`);
+    for (const part of parts) assert.equal(placeholders(part), placeholders(th), `placeholders differ for "${th}" -> "${part}"`);
+    if (parts.length === 2) assert.match(th, /\{n\}/, `plural entries need {n}: ${th}`);
+  }
+});
+
+test('Excel export can be requested in English', async () => {
+  const from = addDays(today(), -2), to = addDays(today(), 1);
+  const res = await call('GET', `/admin/export.xlsx?from=${from}&to=${to}&lang=en`, { token: ctx.admin, raw: true });
+  assert.equal(res.status, 200);
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(Buffer.from(await res.arrayBuffer()));
+  assert.deepEqual(wb.worksheets.map((w) => w.name), ['Summary', 'Daily', 'Leaves']);
+  assert.equal(wb.getWorksheet('Daily').getRow(1).getCell(4).value, 'Check in');
+  const statuses = wb.getWorksheet('Daily').getColumn(8).values.filter((v) => typeof v === 'string');
+  assert.ok(statuses.some((s) => /Present|Late|Leave|Absent/.test(s)), 'statuses are in English');
+  assert.ok(statuses.every((s) => !/[฀-๿]/.test(s)), 'no Thai in the English workbook');
+});

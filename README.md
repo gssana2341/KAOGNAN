@@ -95,6 +95,18 @@ env บนโฮสต์แบบนี้: `NODE_ENV=production`, `ADMIN_PASSW
 
 “ขาด” = วันทำงานที่ผ่านมาแล้วโดยไม่มีเวลาสแกนและไม่มีใบลาที่อนุมัติ · วันที่ใน Excel เป็น ค.ศ. (dd/mm/yyyy) ส่วนหน้าเว็บแสดง พ.ศ.
 ลืมสแกน? แอดมินกดที่แถวในตารางเพื่อแก้เวลา/เพิ่มหมายเหตุได้
+ไฟล์ Excel ออกเป็นภาษาอังกฤษได้ด้วย: เมื่อหน้าเว็บอยู่โหมด English ปุ่มดาวน์โหลดจะส่ง `&lang=en` ให้เอง (หัวตาราง ชื่อชีต สถานะ — ชื่อคน/หมายเหตุที่พิมพ์เป็นไทยจะคงเดิม)
+
+## ภาษา (ไทย / English)
+
+สลับได้ที่ปุ่ม **EN / ไทย** มุมขวาบน (หน้าล็อกอินก็มี) หรือที่การ์ด “ภาษา” ในหน้า “ฉัน” — จำค่าไว้ในเครื่องนั้น (`localStorage: kn_lang`, ค่าเริ่มต้นไทย)
+
+- ข้อความภาษาไทยในโค้ดคือ “คีย์” เขียนเป็น `t('ข้อความ {x}', { x })` แล้วคำแปลอังกฤษอยู่ใน [`public/js/i18n/en.json`](public/js/i18n/en.json) (ภาษาไทยไม่ต้องมีไฟล์ — ใช้ข้อความในโค้ดตรง ๆ)
+- รูปพหูพจน์ใช้ `"{n} วัน": "{n} day|{n} days"` (ซ้าย|ขวา = เอกพจน์|พหูพจน์)
+- ข้อความ error จากเซิร์ฟเวอร์ (ไทย) ก็แปลฝั่งหน้าเว็บด้วยคีย์เดียวกัน
+- เพิ่ม/แก้ข้อความแล้วรัน `npm run i18n:check` — จะบอกว่าคำไหนยังไม่มีคำแปล หรือคำแปลไหนไม่มีใครใช้แล้ว (ชุดทดสอบ `npm test` ตรวจเรื่องนี้ด้วย ถ้าลืมแปลจะไม่ผ่าน)
+- พื้นหลังที่เพิ่มเอง: ใส่ `name_en` ใน `public/bg/backgrounds.json` คู่กับ `name`
+- ตอนนี้รองรับสองภาษา (ไทย/อังกฤษ) — ถ้าจะเพิ่มภาษาที่ 3 ต้องแก้ `public/js/i18n.js`, `server/excel.js` และตัวตรวจ `scripts/i18n-keys.js` ด้วย
 
 ## การตั้งค่าผ่าน environment variables (ไม่บังคับ)
 
@@ -116,7 +128,7 @@ env บนโฮสต์แบบนี้: `NODE_ENV=production`, `ADMIN_PASSW
 server/    Express + SQLite/Turso (libSQL), API ทั้งหมดอยู่ใต้ /api (Bearer token) — app.js = ตัวแอป, index.js = รันเป็นเซิร์ฟเวอร์
 api/       จุดเข้าของ Vercel (รัน server/app.js เป็น serverless function)
 public/    หน้าเว็บ (ไม่ต้อง build): js/views/* แต่ละหน้า, bg/* พื้นหลัง SVG, manifest + service worker
-scripts/   seed-demo, make-cert, make-icons (ไอคอนแอป), build-icons (ไอคอน UI), copy-vendor
+scripts/   seed-demo, make-cert, make-icons (ไอคอนแอป), build-icons (ไอคอน UI), copy-vendor, i18n-keys (ตรวจคำแปล)
 docs/      image-prompts.md — prompt ทำมาสคอต/ไอคอน/พื้นหลัง
 test/      ทดสอบ API ครบเส้นทางหลัก
 ```

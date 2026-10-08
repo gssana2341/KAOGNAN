@@ -64,6 +64,11 @@ a { color: var(--pink-d); }
 .topnav a.active { background: linear-gradient(135deg, #ff8cc2, #ff63a5); color: #fff; box-shadow: 0 3px 10px rgba(221, 63, 134, .3); }
 .who { margin-left: auto; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); font-weight: 600; font-size: .92rem; padding-right: 4px; }
 .who span { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lang-btn { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 5px 11px; border-radius: 999px; border: 2px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-weight: 700; font-size: .8rem; line-height: 1.3; cursor: pointer; box-shadow: 0 2px 0 #ecd2e0; transition: transform .1s, border-color .15s; }
+.lang-btn:hover { border-color: var(--lav); }
+.lang-btn:active { transform: translateY(2px); box-shadow: none; }
+.lang-btn + .who { margin-left: 4px; }
+.login-lang { position: absolute; top: 14px; right: 14px; z-index: 5; margin-left: 0; }
 
 .page { width: 100%; max-width: 960px; margin: 0 auto; padding: 14px 12px 112px; display: flex; flex-direction: column; gap: 14px; }
 .page > * { animation: rise .45s var(--ease) both; }
@@ -90,6 +95,7 @@ a { color: var(--pink-d); }
   .topnav { display: flex; }
   .who span { display: none; }
   .topnav + .who { margin-left: 6px; }
+  .topnav + .lang-btn { margin-left: 8px; }
   .page { padding: 22px 16px 44px; }
   .topbar { margin: 14px auto 0; width: calc(100% - 32px); max-width: 960px; }
 }
@@ -185,7 +191,7 @@ input[type='date'], input[type='time'] { padding-left: 11px; padding-right: 8px;
 .chips.scroll > * { flex: none; }
 
 /* ---------- login ---------- */
-.login-wrap { min-height: 100dvh; display: grid; place-items: center; padding: 16px; }
+.login-wrap { position: relative; min-height: 100dvh; display: grid; place-items: center; padding: 16px; }
 .login-card { width: 100%; max-width: 410px; text-align: center; padding: 8px 22px 26px; overflow: hidden; position: relative; background: #fff; }
 .login-card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 150px; background: linear-gradient(135deg, #ffd3e8, #dcd5ff); z-index: 0; }
 .login-card::after { content: ''; position: absolute; left: -10%; right: -10%; top: 118px; height: 60px; background: #fff; border-radius: 50% 50% 0 0 / 100% 100% 0 0; z-index: 0; }
@@ -222,24 +228,26 @@ input[type='date'], input[type='time'] { padding-left: 11px; padding-right: 8px;
 .ring-wrap.done .track { stroke: var(--mint-l); } .ring-wrap.done .prog { stroke: var(--mint); }
 .ring-label { position: absolute; left: 0; right: 0; bottom: -2px; text-align: center; font-size: .78rem; font-weight: 700; color: var(--muted); }
 .scan-btn {
-  position: absolute; inset: 27px; border-radius: 50%; border: 0; cursor: pointer;
+  /* fixed size + explicit position: no dependence on "inset" stretching, which some mobile browsers don't do for <button> */
+  position: absolute; left: 27px; top: 27px; width: 170px; height: 170px; padding: 0 0 6px; border-radius: 50%; border: 0; cursor: pointer;
   font: inherit; font-weight: 700; color: #fff; font-size: 1.08rem; line-height: 1.25;
   background: radial-gradient(circle at 30% 25%, #ffb3d6, #ff5fa2 70%);
-  box-shadow: 0 8px 0 #cf3a7f, 0 18px 30px rgba(221, 63, 134, 0.35), inset 0 2px 0 rgba(255, 255, 255, .45);
+  /* the 3D edge is drawn INSIDE the circle (not as an offset outer shadow) so the circle stays exactly centred in the ring */
+  box-shadow: inset 0 -8px 0 rgba(168, 30, 98, .30), inset 0 3px 0 rgba(255, 255, 255, .45), 0 14px 26px rgba(221, 63, 134, .32);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   transition: transform .1s, box-shadow .1s;
 }
 .scan-btn::before, .scan-btn::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 3px solid rgba(255, 111, 174, 0.45); animation: pulse 2.6s ease-out infinite; pointer-events: none; }
 .scan-btn::after { animation-delay: 1.3s; }
 @keyframes pulse { 0% { transform: scale(.94); opacity: .9; } 100% { transform: scale(1.25); opacity: 0; } }
-.scan-btn:active { transform: translateY(6px); box-shadow: 0 2px 0 #cf3a7f, 0 8px 14px rgba(221, 63, 134, 0.3); }
+.scan-btn:active { transform: scale(.96); box-shadow: inset 0 -3px 0 rgba(168, 30, 98, .30), inset 0 3px 0 rgba(255, 255, 255, .4), 0 6px 12px rgba(221, 63, 134, .3); }
 .scan-btn .ic { filter: drop-shadow(0 2px 2px rgba(150, 30, 90, .35)); }
-.scan-btn.out { background: radial-gradient(circle at 30% 25%, #c4baff, #7b68ee 70%); box-shadow: 0 8px 0 #5846c4, 0 18px 30px rgba(91, 70, 200, 0.35), inset 0 2px 0 rgba(255, 255, 255, .4); }
+.scan-btn.out { background: radial-gradient(circle at 30% 25%, #c4baff, #7b68ee 70%); box-shadow: inset 0 -8px 0 rgba(62, 44, 170, .34), inset 0 3px 0 rgba(255, 255, 255, .4), 0 14px 26px rgba(91, 70, 200, .32); }
 .scan-btn.out::before, .scan-btn.out::after { border-color: rgba(123, 104, 238, 0.45); }
-.scan-btn.out:active { box-shadow: 0 2px 0 #5846c4; }
-.scan-btn.done { background: radial-gradient(circle at 30% 25%, #9cf0d2, #25b184 70%); box-shadow: 0 8px 0 #178a64, 0 18px 30px rgba(40, 150, 110, .3), inset 0 2px 0 rgba(255, 255, 255, .4); cursor: default; }
+.scan-btn.out:active { box-shadow: inset 0 -3px 0 rgba(62, 44, 170, .34), inset 0 3px 0 rgba(255, 255, 255, .35), 0 6px 12px rgba(91, 70, 200, .3); }
+.scan-btn.done { background: radial-gradient(circle at 30% 25%, #9cf0d2, #25b184 70%); box-shadow: inset 0 -8px 0 rgba(14, 100, 70, .30), inset 0 3px 0 rgba(255, 255, 255, .4), 0 14px 26px rgba(40, 150, 110, .28); cursor: default; }
 .scan-btn.done::before, .scan-btn.done::after { display: none; }
-.scan-btn.done:active { transform: none; box-shadow: 0 8px 0 #178a64; }
+.scan-btn.done:active { transform: none; }
 .shift-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin-top: 14px; font-size: .82rem; font-weight: 600; color: var(--muted); }
 .shift-line span { display: inline-flex; align-items: center; gap: 5px; }
 
