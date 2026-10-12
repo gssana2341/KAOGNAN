@@ -6,11 +6,16 @@ const KEY = 'kn_theme';
 export const THEME_PREFS = ['auto', 'light', 'dark'];
 const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
+let chosen = null; // this visit's choice: keeps working when the browser blocks storage (the login token has the same fallback)
+
 export const getThemePref = () => {
+  if (chosen) return chosen;
   try { const v = localStorage.getItem(KEY); return THEME_PREFS.includes(v) ? v : 'auto'; } catch { return 'auto'; }
 };
 
-export const isDark = (pref = getThemePref()) => (pref === 'dark' ? true : pref === 'light' ? false : !!media?.matches || document.documentElement.dataset.bg === 'night');
+export const deviceIsDark = () => !!media?.matches;
+
+export const isDark = (pref = getThemePref()) => (pref === 'dark' ? true : pref === 'light' ? false : deviceIsDark() || document.documentElement.dataset.bg === 'night');
 
 export function applyTheme() {
   const dark = isDark();
@@ -20,7 +25,8 @@ export function applyTheme() {
 
 export function setThemePref(pref) {
   if (!THEME_PREFS.includes(pref)) return;
-  try { localStorage.setItem(KEY, pref); } catch { /* private mode: applies for this visit only */ }
+  chosen = pref;
+  try { localStorage.setItem(KEY, pref); } catch { /* storage blocked: applies for this visit only */ }
   applyTheme();
 }
 

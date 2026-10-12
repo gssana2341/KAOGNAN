@@ -3,7 +3,7 @@ import { getBackgrounds, applyBg, fileToJpegDataUrl, resetCustomCache } from '..
 import { LANGS, getLang, setLang, t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { logout } from '../main.js';
-import { getThemePref, setThemePref } from '../theme.js';
+import { deviceIsDark, getThemePref, setThemePref } from '../theme.js';
 import { avatar, busy, cardTitle, esc, formData, toast } from '../util.js';
 
 let installEvent = null;
@@ -36,7 +36,7 @@ export default function me(el, { user }) {
         <div class="seg" role="radiogroup" aria-label="${t('โหมดสี')}">
           ${[['auto', 'smartphone', t('อัตโนมัติ')], ['light', 'sun', t('สว่าง')], ['dark', 'moon', t('มืด')]].map(([k, ic, label]) => `<input type="radio" name="theme" id="th-${k}" value="${k}" ${getThemePref() === k ? 'checked' : ''}><label for="th-${k}">${icon(ic, 16)}${label}</label>`).join('')}
         </div>
-        <p class="small muted" style="margin-top:8px">${t('อัตโนมัติ = เปลี่ยนเป็นมืดตามโหมดมืดของเครื่อง หรือเมื่อเลือกพื้นหลัง “ราตรีดาวพราว”')}</p>
+        <p class="small muted" style="margin-top:8px">${t('อัตโนมัติ = เปลี่ยนเป็นมืดตามโหมดมืดของเครื่อง หรือเมื่อเลือกพื้นหลัง “ราตรีดาวพราว”')}<br>${t('เบราว์เซอร์ของคุณรายงานว่าเครื่องอยู่ในโหมด{mode}', { mode: deviceIsDark() ? t('มืด') : t('สว่าง') })}</p>
       </section>
 
       <section class="card">
