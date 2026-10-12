@@ -3,7 +3,7 @@ import { t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { mascot } from '../mascot.js';
 import {
-  STATUS, dowShort, addDays, addMonths, dayNum, dow, esc, fmtDay, fmtDays, fmtHours, fmtMonth, iconChip, isWeekend, skeleton, statusBadge, todayStr,
+  STATUS, dowMini, addDays, addMonths, dayNum, dow, esc, fmtDay, fmtDays, fmtHours, fmtMonth, iconChip, isWeekend, skeleton, statusBadge, todayStr,
 } from '../util.js';
 
 const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
@@ -22,7 +22,7 @@ export default function history(el) {
       const cls = r && r.status !== 'pending' ? STATUS[r.status].cls : '';
       cells.push(`<${r ? 'button' : 'span'} class="c ${cls} ${r ? 'tap' : ''} ${date === todayStr() ? 'today' : ''}" ${r ? `data-date="${date}"` : ''}>${dayNum(date)}</${r ? 'button' : 'span'}>`);
     }
-    return `<div class="cal">${MON_FIRST.map((i) => `<span class="h">${dowShort(i)}</span>`).join('')}${cells.join('')}</div>
+    return `<div class="cal">${MON_FIRST.map((i) => `<span class="h">${dowMini(i)}</span>`).join('')}${cells.join('')}</div>
       <div class="legend"><span><i style="background:var(--mint-l)"></i>${t('มาทำงาน')}</span><span><i style="background:var(--lemon-l)"></i>${t('สาย')}</span><span><i style="background:var(--sky-l)"></i>${t('ลา')}</span><span><i style="background:var(--red-l)"></i>${t('ขาด')}</span></div>`;
   }
 

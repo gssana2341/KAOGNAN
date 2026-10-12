@@ -1,6 +1,7 @@
 import { api } from './api.js';
 import { assets } from './assets.js';
 import { t } from './i18n.js';
+import { applyTheme } from './theme.js';
 
 const FALLBACK = [{ id: 'sky', name: 'ฟ้าใสเมฆฟู', name_en: 'Fluffy sky', file: '/bg/sky.svg', mode: 'cover', tile: 240, thumb: '280px 280px' }];
 export const getBackgrounds = () => (assets.backgrounds.length ? assets.backgrounds : FALLBACK);
@@ -30,6 +31,7 @@ export async function applyBg(id) {
   Object.assign(el.style, { backgroundImage: `url("${url}")`, backgroundSize: size, backgroundRepeat: repeat });
   el.dataset.kind = id === 'custom' ? 'photo' : 'preset';
   document.documentElement.dataset.bg = id;
+  applyTheme(); // the starry-night background switches the "auto" theme to dark
   try { if (id !== 'custom') localStorage.setItem(KEY, id); } catch { /* ignore */ }
 }
 

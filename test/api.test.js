@@ -424,3 +424,19 @@ test('Excel export can be requested in English', async () => {
   const personal = wb.worksheets.find((w) => w.name.startsWith('E002'));
   assert.equal(personal.getRow(personal.rowCount).getCell(1).value, 'Total');
 });
+
+test('dark theme: every colour variable of the light palette has a dark twin, and the boot script is loaded', () => {
+  const pub = path.join(__dirname, '..', 'public');
+  const css = fs.readFileSync(path.join(pub, 'css', 'app.css'), 'utf8');
+  const block = (selector) => {
+    const start = css.indexOf(`${selector} {`);
+    assert.ok(start >= 0, `${selector} block exists`);
+    return css.slice(start, css.indexOf('\n}', start));
+  };
+  const vars = (b) => new Set([...b.matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]));
+  const light = vars(block(':root, .poster'));
+  const dark = vars(block("html[data-theme='dark']"));
+  const missing = [...light].filter((v) => !dark.has(v) && !['--radius', '--ease'].includes(v));
+  assert.deepEqual(missing, [], `add these to the dark theme block: ${missing}`);
+  assert.match(fs.readFileSync(path.join(pub, 'index.html'), 'utf8'), /<script src="\/js\/theme-boot\.js"><\/script>/, 'theme is set before the first paint');
+});

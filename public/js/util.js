@@ -20,6 +20,9 @@ export const dow = (d) => utc(d).getUTCDay();
 export const isWeekend = (d) => [0, 6].includes(dow(d));
 // short weekday name, 0 = Sunday (2023-01-01 was a Sunday)
 export const dowShort = (i) => new Date(Date.UTC(2023, 0, 1 + i)).toLocaleDateString(locale(), { timeZone: 'UTC', weekday: 'short' });
+// even shorter (calendar column heads, ~35px wide on a small phone): จ อ พ พฤ ศ ส อา — English keeps Mon Tue …
+const TH_MINI = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+export const dowMini = (i) => (getLang() === 'th' ? TH_MINI[i] : dowShort(i));
 
 export function addDays(d, n) {
   const x = utc(d);
