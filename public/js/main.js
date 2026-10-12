@@ -3,7 +3,8 @@ import { loadAssets } from './assets.js';
 import { applyBg, lastBg, resetCustomCache } from './bg.js';
 import { getLang, initLang, setLang, t } from './i18n.js';
 import { icon } from './icons.js';
-import { $, $$, avatar, displayName, esc, skeleton } from './util.js';
+import { isDark, setThemePref } from './theme.js';
+import { $, $$, skeleton } from './util.js';
 
 const state = { user: null, pendingBadge: 0 };
 
@@ -66,7 +67,7 @@ function shell(user, activeTab) {
       <a class="brand" href="#/home"><img src="/icons/icon-192.png" alt="">KaoNgan</a>
       <nav class="topnav">${items.map((i) => link(i, 18)).join('')}</nav>
       <button class="lang-btn" id="lang-toggle" type="button" aria-label="${t('เปลี่ยนภาษา')}">${icon('languages', 16)}<span>${getLang() === 'th' ? 'EN' : 'ไทย'}</span></button>
-      <a class="who" href="#/me" aria-label="${t('โปรไฟล์')}">${avatar(user, 34)}<span>${esc(displayName(user))}</span></a>
+      <button class="lang-btn theme-btn" id="theme-toggle" type="button" aria-label="${t('สลับโหมดสว่าง/มืด')}">${icon(isDark() ? 'sun' : 'moon', 16)}</button>
     </header>
     <main class="page" id="view"></main>
     <nav class="tabbar no-print">${items.map((i) => link(i, 23)).join('')}</nav>`;
@@ -124,7 +125,11 @@ async function boot() {
 
 window.addEventListener('hashchange', render);
 window.addEventListener('langchange', () => render());
-app.addEventListener('click', (e) => { if (e.target.closest('#lang-toggle')) setLang(getLang() === 'th' ? 'en' : 'th'); });
+app.addEventListener('click', (e) => {
+  if (e.target.closest('#lang-toggle')) setLang(getLang() === 'th' ? 'en' : 'th');
+  if (e.target.closest('#theme-toggle')) setThemePref(isDark() ? 'light' : 'dark');
+});
+window.addEventListener('themechange', () => { const b = $('#theme-toggle'); if (b) b.innerHTML = icon(isDark() ? 'sun' : 'moon', 16); });
 boot();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

@@ -113,4 +113,9 @@ export default function me(el, { user }) {
       try { await api.post('/me/password', { current: d.current, next: d.next }); form.reset(); toast(t('เปลี่ยนรหัสผ่านแล้ว')); } catch (ex) { err.textContent = ex.message; }
     });
   });
+
+  // the top-bar sun/moon button can change the mode too: keep the radios in step
+  const syncTheme = () => { const radio = el.querySelector(`#th-${getThemePref()}`); if (radio) radio.checked = true; };
+  window.addEventListener('themechange', syncTheme);
+  return () => window.removeEventListener('themechange', syncTheme);
 }

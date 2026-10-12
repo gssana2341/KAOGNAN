@@ -71,8 +71,11 @@ export default function home(el, { user }) {
       const s = r ? STATUS[r.status] : null;
       const waiting = today && (!r || r.status === 'pending');
       const cls = r && r.status !== 'pending' ? s.cls : '';
-      const ic = r && r.status !== 'pending' ? icon(s.icon, 18) : '';
-      return `<div class="wday ${today ? 'today' : ''} ${waiting ? 'waiting' : ''}"><span>${dowShort((i + 1) % 7)}</span><span class="wdot ${cls}">${ic}</span></div>`;
+      const dayOff = !st.settings.workdays.includes((i + 1) % 7);
+      // every circle says something: the status once there is one, an hourglass for today until the scan, a cup on days off, a dot for days still to come
+      const ic = r && r.status !== 'pending' ? icon(s.icon, 18) : waiting ? icon('hourglass', 17) : dayOff ? icon('coffee', 16) : '';
+      const kind = ic ? '' : 'upcoming';
+      return `<div class="wday ${today ? 'today' : ''} ${waiting ? 'waiting' : ''}"><span>${dowShort((i + 1) % 7)}</span><span class="wdot ${cls} ${kind}">${ic}</span></div>`;
     }).join('');
   }
 

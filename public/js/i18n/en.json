@@ -74,7 +74,6 @@
   "จัดการ": "Manage",
   "ฉัน": "Me",
   "เปลี่ยนภาษา": "Change language",
-  "โปรไฟล์": "Profile",
   "แมวน้อย": "Kitten mascot",
 
   "เปิดรูปไม่ได้": "Can't open the picture",
@@ -336,6 +335,7 @@
   "เปิดแอปได้ที่ {host} · KaoNgan ระบบเช็คอินเข้างาน": "Open the app at {host} · KaoNgan work check-in",
   "QR เปลี่ยนอัตโนมัติทุก {n} วินาที — ห้ามถ่ายรูปส่งต่อนะ": "The QR changes automatically every {n} seconds — please don't photograph and share it",
   "โหมดสี": "Appearance",
+  "สลับโหมดสว่าง/มืด": "Switch light / dark mode",
   "เบราว์เซอร์ของคุณรายงานว่าเครื่องอยู่ในโหมด{mode}": "Your browser reports that the device is in {mode} mode",
   "อัตโนมัติ": "Auto",
   "สว่าง": "Light",

@@ -21,6 +21,7 @@ export function applyTheme() {
   const dark = isDark();
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#2b2140' : '#ff8cc2'); // browser bar colour on phones
+  window.dispatchEvent(new Event('themechange')); // the top-bar button and the Me page radios follow along
 }
 
 export function setThemePref(pref) {
